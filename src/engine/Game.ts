@@ -2,7 +2,7 @@
  * ゲーム全体の進行を管理する中心ファイル。
  * マップ、エンティティ、入力、ターン、描画、UI更新をここでつなぐ。
  */
-import { Collision } from "./Collision";
+import { getBlockingEntityAt } from "./Collision";
 import type { Actor, Entity } from "./Entity";
 import { Fov } from "./Fov";
 import { InputManager, type Direction } from "./InputManager";
@@ -12,7 +12,7 @@ import { Logger } from "./Logger";
 import type { GameMap } from "./Map";
 import { Renderer } from "./Renderer";
 import { Tile } from "./Tile";
-import { TurnManager } from "./TurnManager";
+import { runEnemyTurn } from "./TurnManager";
 import type { GameConfig } from "./GameConfig";
 import type { Enemy } from "../game/Enemy";
 import type { Item } from "../game/Item";
@@ -36,7 +36,6 @@ export class Game {
 
   private renderer: Renderer;
   private input = new InputManager();
-  private turnManager = new TurnManager();
   private isBagOpen = false;
   private pendingBagItem: BagItem | null = null;
   private onOpenConfig: (() => void) | null = null;
@@ -160,7 +159,7 @@ export class Game {
       return false;
     }
 
-    if (Collision.getBlockingEntityAt(this.entities.filter((entity) => entity !== actor), targetX, targetY)) {
+    if (getBlockingEntityAt(this.entities.filter((entity) => entity !== actor), targetX, targetY)) {
       return false;
     }
 
@@ -484,7 +483,7 @@ export class Game {
 
   private finishPlayerAction(): void {
     if (!this.isGameOver) {
-      this.turnManager.runEnemyTurn(this);
+      runEnemyTurn(this);
       this.checkPlayerLevelUp();
     }
 

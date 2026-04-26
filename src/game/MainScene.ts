@@ -40,6 +40,7 @@ export class MainScene {
       player.maxHp = carriedPlayer.maxHp;
       player.hp = Math.min(player.maxHp, Math.max(1, carriedPlayer.hp));
       player.attackPower = carriedPlayer.attackPower;
+      player.weapon = carriedPlayer.weapon;
     }
     const enemies: Enemy[] = [];
     const items: Item[] = [];
@@ -57,6 +58,12 @@ export class MainScene {
       if (Math.random() < 0.55) {
         const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
         items.push(new Item(x, y, "回復薬", 8));
+        occupied.add(this.key(x, y));
+      }
+
+      if (Math.random() < 0.25) {
+        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
+        items.push(new Item(x, y, "剣", 0, { atk: 3 }));
         occupied.add(this.key(x, y));
       }
     }

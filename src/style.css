@@ -30,6 +30,10 @@ body {
   padding: 24px;
 }
 
+#app.setup-mode {
+  place-items: center;
+}
+
 .desktop-only {
   min-height: 100vh;
   display: grid;
@@ -47,6 +51,48 @@ body {
   gap: 18px;
   align-items: start;
   width: min(100%, 1260px);
+}
+
+.game-shell.setup-mode {
+  grid-template-columns: minmax(320px, 920px);
+  width: min(100%, 980px);
+}
+
+.game-shell.setup-mode .map-panel,
+.game-shell.setup-mode .status-section,
+.game-shell.setup-mode .log-section {
+  display: none;
+}
+
+.game-shell.setup-mode .side-panel {
+  min-height: 0;
+  width: 100%;
+}
+
+.game-shell.setup-mode .config-section h2 {
+  font-size: 18px;
+}
+
+.game-shell:not(.setup-mode) .config-section {
+  display: none;
+}
+
+.game-shell.setup-mode .config-panel {
+  max-height: min(76vh, 760px);
+}
+
+.game-shell.setup-mode .config-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-shell.setup-mode .config-form fieldset {
+  align-content: start;
+}
+
+.game-shell.setup-mode .config-form fieldset:has(textarea),
+.game-shell.setup-mode .config-form fieldset:last-of-type,
+.game-shell.setup-mode .config-apply {
+  grid-column: 1 / -1;
 }
 
 .map-panel {
@@ -169,7 +215,8 @@ h2 {
 
 .bag-actions button,
 .bag-contents button,
-.bag-choice button {
+.bag-choice button,
+.status-command {
   border: 1px solid #43523f;
   background: #182018;
   color: #e7e2d2;
@@ -181,9 +228,25 @@ h2 {
 
 .bag-actions button:hover,
 .bag-contents button:hover,
-.bag-choice button:hover {
+.bag-choice button:hover,
+.status-command:hover {
   border-color: #6c855e;
   background: #202b20;
+}
+
+.status-command {
+  width: 100%;
+}
+
+.status-command.danger {
+  border-color: #70443c;
+  background: #241615;
+  color: #ffb2a8;
+}
+
+.status-command.danger:hover {
+  border-color: #a9655a;
+  background: #321d1b;
 }
 
 .bag-contents {

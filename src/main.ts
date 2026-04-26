@@ -15,43 +15,78 @@ if (!window.desktopProject) {
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
+const appElement = document.querySelector<HTMLElement>("#app");
+const gameShellElement = document.querySelector<HTMLElement>("#game-shell");
 const mapOverlayElement = document.querySelector<HTMLElement>("#map-overlay");
 const statusElement = document.querySelector<HTMLElement>("#status");
 const logElement = document.querySelector<HTMLElement>("#log");
 const configPanelElement = document.querySelector<HTMLElement>("#config-panel");
 const startScreenElement = document.querySelector<HTMLElement>("#start-screen");
 
-if (!canvas || !mapOverlayElement || !statusElement || !logElement || !configPanelElement || !startScreenElement) {
+if (!canvas || !appElement || !gameShellElement || !mapOverlayElement || !statusElement || !logElement || !configPanelElement || !startScreenElement) {
   throw new Error("Required DOM elements are missing.");
 }
 
 const startScreen = startScreenElement;
+const appRoot = appElement;
+const gameShell = gameShellElement;
 
 // Gameはエンジン本体、MainSceneはサンプルゲームの初期化を担当する。
 const game = new Game(canvas, mapOverlayElement, statusElement, logElement, sampleGameConfig);
 const scene = new MainScene(game, sampleGameConfig);
-let hasStarted = false;
+let isEditingStartedGame = false;
+let configPanel: ConfigPanel;
 
 function startOrRestartGame(): void {
-  hasStarted = true;
+  appRoot.classList.remove("setup-mode");
+  gameShell.classList.remove("setup-mode");
   startScreen.classList.add("is-hidden");
+
+  if (isEditingStartedGame) {
+    isEditingStartedGame = false;
+    game.resumeAfterConfigChange();
+    return;
+  }
+
   scene.load(1);
 }
 
 function returnToSetup(): void {
-  hasStarted = false;
+  isEditingStartedGame = false;
+  appRoot.classList.add("setup-mode");
+  gameShell.classList.add("setup-mode");
   startScreen.classList.remove("is-hidden");
   game.resetToUnstarted();
+}
+
+function openConfigFromGame(): void {
+  isEditingStartedGame = true;
+  appRoot.classList.add("setup-mode");
+  gameShell.classList.add("setup-mode");
+  startScreen.classList.remove("is-hidden");
+  game.pauseForConfig();
+  configPanel.refresh();
+}
+
+function quitGameToSetup(): void {
+  isEditingStartedGame = false;
+  appRoot.classList.add("setup-mode");
+  gameShell.classList.add("setup-mode");
+  startScreen.classList.remove("is-hidden");
+  game.resetToUnstarted();
+  configPanel.refresh();
 }
 
 // 入力イベントから、再開始と階段移動のゲーム処理へつなぐ。
 game.setRestartHandler(() => scene.load());
 game.setActionHandler(() => scene.goToNextFloor());
-new ConfigPanel(
+game.setOpenConfigHandler(openConfigFromGame);
+game.setQuitGameHandler(quitGameToSetup);
+configPanel = new ConfigPanel(
   configPanelElement,
   sampleGameConfig,
   new DesktopProjectStorage(),
   startOrRestartGame,
-  () => hasStarted ? "設定を反映して最初から" : "ゲームスタート",
+  () => isEditingStartedGame ? "ゲーム再開" : "ゲームスタート",
   returnToSetup,
 );

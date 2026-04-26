@@ -50,6 +50,10 @@ export class ConfigPanel {
     this.root.addEventListener("change", (event) => this.handleChange(event));
   }
 
+  refresh(): void {
+    this.render();
+  }
+
   private render(): void {
     this.root.innerHTML = [
       '<form class="config-form">',

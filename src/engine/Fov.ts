@@ -1,11 +1,20 @@
+/**
+ * 簡易的な視界を管理するファイル。
+ * プレイヤー周囲の一定範囲を「見える」とし、過去に見た場所も記録する。
+ */
 import type { GameMap } from "./Map";
 
+/** ローグライクらしい明暗表示のための視界クラス。 */
 export class Fov {
   private visible = new Set<string>();
   private explored = new Set<string>();
 
   constructor(private radius = 8) {}
 
+  /**
+   * 現在のプレイヤー位置から見えるマスを計算する。
+   * 初期MVPなので壁による遮蔽はせず、周囲8マス程度を単純に明るくする。
+   */
   compute(map: GameMap, originX: number, originY: number): void {
     this.visible.clear();
 
@@ -22,10 +31,12 @@ export class Fov {
     }
   }
 
+  /** 今このターンで見えているかどうか。 */
   isVisible(x: number, y: number): boolean {
     return this.visible.has(this.key(x, y));
   }
 
+  /** 過去に一度でも見たことがあるかどうか。 */
   isExplored(x: number, y: number): boolean {
     return this.explored.has(this.key(x, y));
   }

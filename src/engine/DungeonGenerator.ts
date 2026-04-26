@@ -1,6 +1,11 @@
+/**
+ * ランダムダンジョンを生成するファイル。
+ * 部屋を作り、部屋同士を通路でつなぎ、最後の部屋に階段を置く。
+ */
 import { GameMap } from "./Map";
 import { Tile } from "./Tile";
 
+/** ダンジョン内の長方形の部屋。 */
 export type Room = {
   x: number;
   y: number;
@@ -8,11 +13,16 @@ export type Room = {
   height: number;
 };
 
+/** 生成結果として、マップ本体と部屋一覧を返す。 */
 export type Dungeon = {
   map: GameMap;
   rooms: Room[];
 };
 
+/**
+ * 部屋と通路を使ったシンプルなダンジョン生成器。
+ * 生成された部屋は必ず通路でつながるため、最低限移動可能なマップになる。
+ */
 export class DungeonGenerator {
   constructor(
     private width: number,
@@ -22,6 +32,10 @@ export class DungeonGenerator {
     private maxRoomSize = 10,
   ) {}
 
+  /**
+   * ダンジョン生成のメイン処理。
+   * ランダムな部屋を重ならないように配置し、直前の部屋と通路で接続する。
+   */
   generate(): Dungeon {
     const map = new GameMap(this.width, this.height, Tile.wall());
     const rooms: Room[] = [];
@@ -64,6 +78,7 @@ export class DungeonGenerator {
     return { map, rooms };
   }
 
+  /** 部屋の中心座標。プレイヤー初期位置や通路接続に使う。 */
   center(room: Room): [number, number] {
     return [
       Math.floor(room.x + room.width / 2),
@@ -71,6 +86,7 @@ export class DungeonGenerator {
     ];
   }
 
+  /** 敵やアイテムを置くため、ランダムな部屋の床座標を選ぶ。 */
   randomFloorPosition(rooms: Room[]): [number, number] {
     const room = rooms[this.randomInt(0, rooms.length - 1)];
     return [
@@ -79,6 +95,7 @@ export class DungeonGenerator {
     ];
   }
 
+  /** 部屋の範囲を床タイルに変える。 */
   private carveRoom(map: GameMap, room: Room): void {
     for (let y = room.y; y < room.y + room.height; y += 1) {
       for (let x = room.x; x < room.x + room.width; x += 1) {
@@ -87,18 +104,21 @@ export class DungeonGenerator {
     }
   }
 
+  /** 横方向の通路を床タイルで掘る。 */
   private carveHorizontalTunnel(map: GameMap, x1: number, x2: number, y: number): void {
     for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x += 1) {
       map.setTile(x, y, Tile.floor());
     }
   }
 
+  /** 縦方向の通路を床タイルで掘る。 */
   private carveVerticalTunnel(map: GameMap, y1: number, y2: number, x: number): void {
     for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y += 1) {
       map.setTile(x, y, Tile.floor());
     }
   }
 
+  /** 部屋同士が重なると通路設計が崩れやすいため、配置前に判定する。 */
   private roomsOverlap(a: Room, b: Room): boolean {
     return (
       a.x <= b.x + b.width &&

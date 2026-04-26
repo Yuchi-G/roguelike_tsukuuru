@@ -53,6 +53,37 @@ canvas {
   border: 1px solid #273027;
 }
 
+.start-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px solid rgba(39, 48, 39, 0.78);
+  background: rgba(5, 6, 5, 0.82);
+}
+
+.start-screen.is-hidden {
+  display: none;
+}
+
+.start-screen div {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+}
+
+.start-screen strong {
+  color: #f0d982;
+  font-size: 28px;
+}
+
+.start-screen span {
+  color: #c9c5b4;
+  font-size: 14px;
+}
+
 .map-overlay {
   position: absolute;
   inset: 0;
@@ -127,6 +158,7 @@ h2 {
 }
 
 .bag-actions button,
+.bag-contents button,
 .bag-choice button {
   border: 1px solid #43523f;
   background: #182018;
@@ -138,6 +170,7 @@ h2 {
 }
 
 .bag-actions button:hover,
+.bag-contents button:hover,
 .bag-choice button:hover {
   border-color: #6c855e;
   background: #202b20;
@@ -162,7 +195,14 @@ h2 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: 6px;
+}
+
+.bag-contents li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .bag-choice {
@@ -259,7 +299,9 @@ h2 {
   color: #c9c5b4;
 }
 
-.config-form input {
+.config-form input,
+.config-form select,
+.config-form textarea {
   min-width: 0;
   width: 100%;
   border: 1px solid #394339;
@@ -268,6 +310,12 @@ h2 {
   font: inherit;
   font-size: 12px;
   padding: 4px 6px;
+}
+
+.config-form textarea {
+  resize: vertical;
+  min-height: 96px;
+  grid-column: 1 / -1;
 }
 
 .config-form input[type="color"] {
@@ -292,7 +340,28 @@ h2 {
   font-size: 12px;
 }
 
-.config-apply {
+.project-status,
+.project-help {
+  border: 1px solid #273027;
+  background: #0c100c;
+  color: #c9c5b4;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 7px 8px;
+}
+
+.project-status {
+  color: #f0d982;
+}
+
+.project-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.config-apply,
+.config-secondary {
   border: 1px solid #5f5030;
   background: #241f12;
   color: #f0d982;
@@ -302,9 +371,21 @@ h2 {
   cursor: pointer;
 }
 
-.config-apply:hover {
+.config-secondary {
+  border-color: #43523f;
+  background: #182018;
+  color: #e7e2d2;
+}
+
+.config-apply:hover,
+.config-secondary:hover {
   border-color: #9a854f;
   background: #2d2818;
+}
+
+.config-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 /* 狭い画面ではCanvasの下にUIを回す。 */

@@ -3,6 +3,9 @@ import type { Game } from "./Game";
 import type { TileDefinition, TileType } from "./Tile";
 
 export type PlayerInitialStats = {
+  name: string;
+  char: string;
+  color: string;
   hp: number;
   attackPower: number;
   level: number;
@@ -23,6 +26,8 @@ export type EquipmentDefinition = {
   atk: number;
 };
 
+export type EffectParams = Record<string, number | string | boolean>;
+
 export type EnemyDefinition = {
   id: string;
   char: string;
@@ -31,7 +36,7 @@ export type EnemyDefinition = {
   maxHp: number;
   attackPower: number;
   expValue: number;
-  ai: "chase";
+  aiId: string;
 };
 
 export type ItemDefinition = {
@@ -39,16 +44,59 @@ export type ItemDefinition = {
   name: string;
   char: string;
   color: string;
-  healAmount?: number;
-  equipment?: EquipmentDefinition;
+  effects: Array<{
+    effectId: string;
+    params: EffectParams;
+  }>;
 };
 
-export type FloorGenerationRule = {
-  enemyCount(floor: number, roomIndex: number): number;
+export type FloorRangeRule = {
+  id: string;
+  fromFloor: number;
+  toFloor?: number;
+  enemyCount: {
+    min: number;
+    max: number;
+  };
+  enemyTable: Array<{
+    enemyId: string;
+    weight: number;
+  }>;
   itemDrops: Array<{
     itemId: string;
     chance: number;
   }>;
+  enemyHpBonusPerFloor: number;
+  enemyAttackBonusPerFloor: number;
+};
+
+export type DungeonGenerationRules = {
+  floors: FloorRangeRule[];
+  maxEnemies: number;
+  maxItems: number;
+};
+
+export type RenderConfig = {
+  tileSize: number;
+  fontFamily: string;
+  canvasBackground: string;
+  unexploredColor: string;
+  unexploredBackground: string;
+  exploredColor: string;
+  exploredBackground: string;
+  gameOverOverlay: string;
+  gameOverTitleColor: string;
+  gameOverTextColor: string;
+};
+
+export type FovConfig = {
+  radius: number;
+};
+
+export type ProgressionConfig = {
+  nextLevelMultiplier: number;
+  hpGainPerLevel: number;
+  attackGainPerLevel: number;
 };
 
 export type GameMessages = {
@@ -62,6 +110,14 @@ export type GameMessages = {
   bagFull(itemName: string): string;
   itemUsed(itemName: string, healed: number): string;
   weaponEquipped(itemName: string, atk: number): string;
+  blockedByBagChoice(): string;
+  blockedByWall(): string;
+  noUsableItem(): string;
+  invalidBagSelection(): string;
+  bagItemReplaced(pickedName: string, droppedName: string): string;
+  pickedItemDiscarded(itemName: string): string;
+  levelUp(level: number): string;
+  useStairsPrompt(): string;
 };
 
 export type GameHooks = {
@@ -78,7 +134,10 @@ export type GameConfig = {
   tiles: Record<TileType, TileDefinition>;
   enemies: EnemyDefinition[];
   items: ItemDefinition[];
-  floorRules: FloorGenerationRule;
+  floorRules: DungeonGenerationRules;
+  render: RenderConfig;
+  fov: FovConfig;
+  progression: ProgressionConfig;
   messages: GameMessages;
   hooks?: GameHooks;
 };

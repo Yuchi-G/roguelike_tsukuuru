@@ -10,8 +10,8 @@ export class EntityFactory {
     return new Player(x, y, this.config.player);
   }
 
-  createEnemy(x: number, y: number, definition: EnemyDefinition, floor: number): Enemy {
-    return new Enemy(x, y, definition, floor);
+  createEnemy(x: number, y: number, definition: EnemyDefinition, hpBonus = 0, attackBonus = 0): Enemy {
+    return new Enemy(x, y, definition, hpBonus, attackBonus);
   }
 
   createItem(x: number, y: number, definition: ItemDefinition): Item {

@@ -47,13 +47,13 @@ export abstract class Actor extends Entity {
 
   /** 戦闘で受けたダメージをHPへ反映する。 */
   damage(amount: number): void {
-    this.hp = Math.max(0, this.hp - amount);
+    this.hp = Math.max(0, Math.round(this.hp - Math.round(amount)));
   }
 
   /** 回復薬などでHPを回復し、実際に増えた量を返す。 */
   heal(amount: number): number {
     const before = this.hp;
-    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.hp = Math.min(this.maxHp, Math.round(this.hp + Math.round(amount)));
     return this.hp - before;
   }
 }

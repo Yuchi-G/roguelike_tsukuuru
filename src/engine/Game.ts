@@ -10,6 +10,7 @@ import { Logger } from "./Logger";
 import type { GameMap } from "./Map";
 import { Renderer } from "./Renderer";
 import { TurnManager } from "./TurnManager";
+import type { GameConfig } from "./GameConfig";
 import type { Enemy } from "../game/Enemy";
 import type { Item } from "../game/Item";
 import type { BagItem, Player } from "../game/Player";
@@ -39,6 +40,7 @@ export class Game {
     private mapOverlayElement: HTMLElement,
     private statusElement: HTMLElement,
     private logElement: HTMLElement,
+    public config: GameConfig,
   ) {
     this.renderer = new Renderer(canvas);
     this.input.setMoveHandler((direction) => this.handlePlayerMove(direction));
@@ -81,7 +83,8 @@ export class Game {
     this.pendingBagItem = null;
     this.input.setEnabled(true);
     this.renderer.resizeToMap(map);
-    this.logger.add(`${this.floor}階に到着した。`);
+    this.logger.add(this.config.messages.floorArrive(this.floor));
+    this.config.hooks?.onFloorChange?.({ game: this, floor: this.floor });
     this.refresh();
   }
 
@@ -123,17 +126,20 @@ export class Game {
   attack(attacker: Actor, defender: Actor): void {
     const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
     defender.damage(attackPower);
-    this.logger.add(`${attacker.name}が${defender.name}に${attackPower}ダメージ。`);
+    this.logger.add(this.config.messages.attack(attacker, defender, attackPower));
+    this.config.hooks?.onAttack?.({ game: this, attacker, defender, damage: attackPower });
 
     if (defender.isDead) {
       const defeatedEnemy = this.enemies.find((enemy) => enemy.id === defender.id);
       if (defeatedEnemy && attacker.id === this.player.id) {
         this.player.exp += defeatedEnemy.expValue;
-        this.logger.add(`${defeatedEnemy.name}を倒した（+${defeatedEnemy.expValue} EXP）`);
+        this.logger.add(this.config.messages.defeatWithExp(defeatedEnemy.name, defeatedEnemy.expValue));
         this.checkPlayerLevelUp();
       } else {
-        this.logger.add(`${defender.name}を倒した。`);
+        this.logger.add(this.config.messages.defeat(defender.name));
       }
+
+      this.config.hooks?.onDeath?.({ game: this, actor: defender });
 
       this.enemies = this.enemies.filter((enemy) => enemy.id !== defender.id);
 
@@ -149,18 +155,19 @@ export class Game {
     if (!item) return;
 
     item.onPickup(this.player, this);
+    this.config.hooks?.onPickup?.({ game: this, itemName: item.name });
     this.items = this.items.filter((candidate) => candidate.id !== item.id);
   }
 
   /** バッグへ入るアイテムを拾う。満杯ならUIで入れ替え判断を待つ。 */
   offerBagItem(item: BagItem): void {
     if (this.player.addItem(item)) {
-      this.logger.add(`${item.name}を拾った。バッグに入れた。`);
+      this.logger.add(this.config.messages.pickupToBag(item.name));
       return;
     }
 
     this.pendingBagItem = item;
-    this.logger.add(`バッグがいっぱいだ。${item.name}をどうする？`);
+    this.logger.add(this.config.messages.bagFull(item.name));
   }
 
   /** ゲーム状態を画面とUIへ反映する。 */
@@ -175,8 +182,9 @@ export class Game {
   endGame(): void {
     this.isGameOver = true;
     this.input.setEnabled(false);
-    this.logger.add("プレイヤーは倒れた。");
-    this.logger.add("Enterキーで新しいゲームを開始。");
+    this.logger.add(this.config.messages.gameOver());
+    this.logger.add(this.config.messages.restart());
+    this.config.hooks?.onGameOver?.({ game: this });
   }
 
   /**
@@ -332,7 +340,7 @@ export class Game {
       return;
     }
 
-    this.logger.add(`${result.name}を使った。HP +${result.healed}。`);
+    this.logger.add(this.config.messages.itemUsed(result.name, result.healed));
     this.refresh();
   }
 

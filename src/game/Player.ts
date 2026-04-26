@@ -3,6 +3,7 @@
  * 表示文字、初期HP、攻撃力などの基本性能をまとめる。
  */
 import { Actor } from "../engine/Entity";
+import type { PlayerInitialStats } from "../engine/GameConfig";
 
 export type Equipment = {
   atk: number;
@@ -15,15 +16,19 @@ export type BagItem = {
 
 /** プレイヤーキャラクター。入力による移動や攻撃はGame側で処理する。 */
 export class Player extends Actor {
-  public readonly maxBagItems = 10;
-  public level = 1;
-  public exp = 0;
-  public nextLevelExp = 10;
+  public readonly maxBagItems: number;
+  public level: number;
+  public exp: number;
+  public nextLevelExp: number;
   public weapon: Equipment | null = null;
   public itemBag: BagItem[] = [];
 
-  constructor(x: number, y: number) {
-    super(x, y, "@", "#f5f0d0", "プレイヤー", 30, 30, 5);
+  constructor(x: number, y: number, stats: PlayerInitialStats) {
+    super(x, y, "@", "#f5f0d0", "プレイヤー", stats.hp, stats.hp, stats.attackPower);
+    this.level = stats.level;
+    this.exp = stats.exp;
+    this.nextLevelExp = stats.nextLevelExp;
+    this.maxBagItems = stats.maxBagItems;
   }
 
   get isBagFull(): boolean {

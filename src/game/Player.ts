@@ -3,6 +3,7 @@
  * 表示文字、初期HP、攻撃力などの基本性能をまとめる。
  */
 import { Actor } from "../engine/Entity";
+import type { EffectParams, PlayerInitialStats } from "../engine/GameConfig";
 
 export type Equipment = {
   atk: number;
@@ -10,20 +11,26 @@ export type Equipment = {
 
 export type BagItem = {
   name: string;
-  healAmount: number;
+  effectId: string;
+  params: EffectParams;
+  description: string;
 };
 
 /** プレイヤーキャラクター。入力による移動や攻撃はGame側で処理する。 */
 export class Player extends Actor {
-  public readonly maxBagItems = 10;
-  public level = 1;
-  public exp = 0;
-  public nextLevelExp = 10;
+  public readonly maxBagItems: number;
+  public level: number;
+  public exp: number;
+  public nextLevelExp: number;
   public weapon: Equipment | null = null;
   public itemBag: BagItem[] = [];
 
-  constructor(x: number, y: number) {
-    super(x, y, "@", "#f5f0d0", "プレイヤー", 30, 30, 5);
+  constructor(x: number, y: number, stats: PlayerInitialStats) {
+    super(x, y, stats.char, stats.color, stats.name, stats.hp, stats.hp, stats.attackPower);
+    this.level = stats.level;
+    this.exp = stats.exp;
+    this.nextLevelExp = stats.nextLevelExp;
+    this.maxBagItems = stats.maxBagItems;
   }
 
   get isBagFull(): boolean {
@@ -55,30 +62,27 @@ export class Player extends Actor {
     return dropped ?? null;
   }
 
-  /** バッグの先頭にある回復アイテムを使う。 */
-  useHealingItem(): { name: string; healed: number } | null {
-    const item = this.itemBag.shift();
-    if (!item) {
+  /** 指定したバッグ内アイテムを取り出す。 */
+  takeBagItemAt(index: number): BagItem | null {
+    if (index < 0 || index >= this.itemBag.length) {
       return null;
     }
 
-    return {
-      name: item.name,
-      healed: this.heal(item.healAmount),
-    };
+    const [item] = this.itemBag.splice(index, 1);
+    return item ?? null;
   }
 
   /** 経験値が次のレベルに届いていれば、ステータスを伸ばしてレベルアップする。 */
-  checkLevelUp(): number {
+  checkLevelUp(nextLevelMultiplier: number, hpGainPerLevel: number, attackGainPerLevel: number): number {
     let levelUps = 0;
 
     while (this.exp >= this.nextLevelExp) {
       this.exp -= this.nextLevelExp;
       this.level += 1;
-      this.nextLevelExp = Math.floor(this.nextLevelExp * 1.5);
-      this.maxHp += 5;
+      this.nextLevelExp = Math.floor(this.nextLevelExp * nextLevelMultiplier);
+      this.maxHp = Math.max(1, Math.round(this.maxHp + hpGainPerLevel));
       this.hp = this.maxHp;
-      this.attackPower += 2;
+      this.attackPower = Math.max(0, Math.round(this.attackPower + attackGainPerLevel));
       levelUps += 1;
     }
 

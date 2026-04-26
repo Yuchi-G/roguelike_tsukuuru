@@ -3,8 +3,10 @@
  * エンジンの部品を使って、プレイヤー・敵・アイテムを配置する。
  */
 import { DungeonGenerator } from "../engine/DungeonGenerator";
+import { EntityFactory } from "../engine/EntityFactory";
 import type { Game } from "../engine/Game";
-import { Enemy, enemyTypes } from "./Enemy";
+import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "../engine/GameConfig";
+import { Enemy } from "./Enemy";
 import { Item } from "./Item";
 import { Player } from "./Player";
 
@@ -14,8 +16,14 @@ import { Player } from "./Player";
  */
 export class MainScene {
   private floor = 1;
+  private factory: EntityFactory;
 
-  constructor(private game: Game) {}
+  constructor(
+    private game: Game,
+    private config: GameConfig,
+  ) {
+    this.factory = new EntityFactory(config);
+  }
 
   /**
    * 新しい階層を生成する。
@@ -23,7 +31,14 @@ export class MainScene {
    */
   load(floor = 1, carriedPlayer?: Player): void {
     this.floor = floor;
-    const generator = new DungeonGenerator(48, 32);
+    const generator = new DungeonGenerator(
+      this.config.dungeon.width,
+      this.config.dungeon.height,
+      this.config.dungeon.maxRooms,
+      this.config.dungeon.minRoomSize,
+      this.config.dungeon.maxRoomSize,
+      this.config.tiles,
+    );
     const dungeon = generator.generate();
     const rooms = dungeon.rooms;
 
@@ -32,7 +47,7 @@ export class MainScene {
     }
 
     const [playerX, playerY] = generator.center(rooms[0]);
-    const player = new Player(playerX, playerY);
+    const player = this.factory.createPlayer(playerX, playerY);
     if (carriedPlayer) {
       player.level = carriedPlayer.level;
       player.exp = carriedPlayer.exp;
@@ -49,33 +64,43 @@ export class MainScene {
 
     // 敵とアイテムは床の空きマスに置き、同じ場所に重ならないようにする。
     for (let i = 1; i < rooms.length; i += 1) {
-      const enemyCount = Math.random() < 0.7 ? 1 : 2;
+      const rule = this.ruleForFloor(this.floor);
+      const enemyCount = this.randomInt(rule.enemyCount.min, rule.enemyCount.max);
       for (let j = 0; j < enemyCount; j += 1) {
         const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
-        enemies.push(new Enemy(x, y, this.randomEnemyType(), this.floor));
+        enemies.push(this.factory.createEnemy(
+          x,
+          y,
+          this.randomEnemyDefinition(rule),
+          Math.max(0, this.floor - rule.fromFloor) * rule.enemyHpBonusPerFloor,
+          Math.max(0, this.floor - rule.fromFloor) * rule.enemyAttackBonusPerFloor,
+        ));
         occupied.add(this.key(x, y));
       }
 
-      if (Math.random() < 0.55) {
-        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
-        items.push(new Item(x, y, "回復薬", 8));
-        occupied.add(this.key(x, y));
-      }
-
-      if (Math.random() < 0.25) {
-        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
-        items.push(new Item(x, y, "剣", 0, { atk: 3 }));
-        occupied.add(this.key(x, y));
+      for (const itemDrop of rule.itemDrops) {
+        if (Math.random() < itemDrop.chance) {
+          const itemDefinition = this.findItemDefinition(itemDrop.itemId);
+          const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
+          items.push(this.factory.createItem(x, y, itemDefinition));
+          occupied.add(this.key(x, y));
+        }
       }
     }
 
-    this.game.start(dungeon.map, player, enemies.slice(0, 12), items.slice(0, 8), this.floor);
+    this.game.start(
+      dungeon.map,
+      player,
+      enemies.slice(0, this.config.floorRules.maxEnemies),
+      items.slice(0, this.config.floorRules.maxItems),
+      this.floor,
+    );
   }
 
   /** 階段上でSpaceを押した時の次階層移動。 */
   goToNextFloor(): void {
     if (!this.game.isPlayerOnStairs()) {
-      this.game.logger.add("階段の上でSpaceキーを押す必要がある。");
+      this.game.logger.add(this.config.messages.useStairsPrompt());
       this.game.refresh();
       return;
     }
@@ -98,7 +123,53 @@ export class MainScene {
     return `${x},${y}`;
   }
 
-  private randomEnemyType(): Enemy["type"] {
-    return enemyTypes[Math.floor(Math.random() * enemyTypes.length)].type;
+  private ruleForFloor(floor: number): FloorRangeRule {
+    const rule = this.config.floorRules.floors.find((candidate) => (
+      floor >= candidate.fromFloor && (candidate.toFloor === undefined || floor <= candidate.toFloor)
+    ));
+    if (!rule) {
+      throw new Error(`No floor rule for floor: ${floor}`);
+    }
+
+    return rule;
+  }
+
+  private randomEnemyDefinition(rule: FloorRangeRule): EnemyDefinition {
+    const totalWeight = rule.enemyTable.reduce((sum, entry) => sum + Math.max(0, entry.weight), 0);
+    if (totalWeight <= 0) {
+      return this.config.enemies[0];
+    }
+
+    let roll = Math.random() * totalWeight;
+    for (const entry of rule.enemyTable) {
+      roll -= Math.max(0, entry.weight);
+      if (roll <= 0) {
+        return this.findEnemyDefinition(entry.enemyId);
+      }
+    }
+
+    return this.findEnemyDefinition(rule.enemyTable[0].enemyId);
+  }
+
+  private findEnemyDefinition(enemyId: string): EnemyDefinition {
+    const enemy = this.config.enemies.find((definition) => definition.id === enemyId);
+    if (!enemy) {
+      throw new Error(`Unknown enemy definition: ${enemyId}`);
+    }
+
+    return enemy;
+  }
+
+  private randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  private findItemDefinition(itemId: string): ItemDefinition {
+    const item = this.config.items.find((definition) => definition.id === itemId);
+    if (!item) {
+      throw new Error(`Unknown item definition: ${itemId}`);
+    }
+
+    return item;
   }
 }

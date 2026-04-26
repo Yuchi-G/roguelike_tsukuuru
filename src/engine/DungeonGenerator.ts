@@ -3,7 +3,7 @@
  * 部屋を作り、部屋同士を通路でつなぎ、最後の部屋に階段を置く。
  */
 import { GameMap } from "./Map";
-import { Tile } from "./Tile";
+import { defaultTileDefinitions, Tile, type TileDefinition, type TileType } from "./Tile";
 
 /** ダンジョン内の長方形の部屋。 */
 export type Room = {
@@ -30,6 +30,7 @@ export class DungeonGenerator {
     private maxRooms = 12,
     private minRoomSize = 5,
     private maxRoomSize = 10,
+    private tiles: Record<TileType, TileDefinition> = defaultTileDefinitions,
   ) {}
 
   /**
@@ -37,7 +38,7 @@ export class DungeonGenerator {
    * ランダムな部屋を重ならないように配置し、直前の部屋と通路で接続する。
    */
   generate(): Dungeon {
-    const map = new GameMap(this.width, this.height, Tile.wall());
+    const map = new GameMap(this.width, this.height, Tile.fromDefinition(this.tiles.wall));
     const rooms: Room[] = [];
 
     for (let i = 0; i < this.maxRooms; i += 1) {
@@ -72,7 +73,7 @@ export class DungeonGenerator {
     const lastRoom = rooms[rooms.length - 1];
     if (lastRoom) {
       const [stairsX, stairsY] = this.center(lastRoom);
-      map.setTile(stairsX, stairsY, Tile.stairs());
+      map.setTile(stairsX, stairsY, Tile.fromDefinition(this.tiles.stairs));
     }
 
     return { map, rooms };
@@ -99,7 +100,7 @@ export class DungeonGenerator {
   private carveRoom(map: GameMap, room: Room): void {
     for (let y = room.y; y < room.y + room.height; y += 1) {
       for (let x = room.x; x < room.x + room.width; x += 1) {
-        map.setTile(x, y, Tile.floor());
+        map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
       }
     }
   }
@@ -107,14 +108,14 @@ export class DungeonGenerator {
   /** 横方向の通路を床タイルで掘る。 */
   private carveHorizontalTunnel(map: GameMap, x1: number, x2: number, y: number): void {
     for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x += 1) {
-      map.setTile(x, y, Tile.floor());
+      map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
     }
   }
 
   /** 縦方向の通路を床タイルで掘る。 */
   private carveVerticalTunnel(map: GameMap, y1: number, y2: number, x: number): void {
     for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y += 1) {
-      map.setTile(x, y, Tile.floor());
+      map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
     }
   }
 

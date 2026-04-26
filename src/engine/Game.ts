@@ -6,10 +6,13 @@ import { Collision } from "./Collision";
 import type { Actor, Entity } from "./Entity";
 import { Fov } from "./Fov";
 import { InputManager, type Direction } from "./InputManager";
+import { createDefaultAiRegistry, type AiRegistry } from "./AiRegistry";
+import { createDefaultItemEffectRegistry, type ItemEffectRegistry } from "./ItemEffectRegistry";
 import { Logger } from "./Logger";
 import type { GameMap } from "./Map";
 import { Renderer } from "./Renderer";
 import { TurnManager } from "./TurnManager";
+import type { GameConfig } from "./GameConfig";
 import type { Enemy } from "../game/Enemy";
 import type { Item } from "../game/Item";
 import type { BagItem, Player } from "../game/Player";
@@ -23,10 +26,12 @@ export class Game {
   public player!: Player;
   public enemies: Enemy[] = [];
   public items: Item[] = [];
-  public fov = new Fov(8);
+  public fov: Fov;
   public logger = new Logger();
   public isGameOver = false;
   public floor = 1;
+  public aiRegistry: AiRegistry;
+  public itemEffectRegistry: ItemEffectRegistry;
 
   private renderer: Renderer;
   private input = new InputManager();
@@ -39,10 +44,15 @@ export class Game {
     private mapOverlayElement: HTMLElement,
     private statusElement: HTMLElement,
     private logElement: HTMLElement,
+    public config: GameConfig,
   ) {
-    this.renderer = new Renderer(canvas);
+    this.fov = new Fov(config.fov.radius);
+    this.aiRegistry = createDefaultAiRegistry();
+    this.itemEffectRegistry = createDefaultItemEffectRegistry();
+    this.renderer = new Renderer(canvas, config.render);
+    this.input.setEnabled(false);
     this.input.setMoveHandler((direction) => this.handlePlayerMove(direction));
-    this.input.setUseItemHandler(() => this.useBagItem());
+    this.input.setUseItemHandler(() => this.openBagForUse());
     this.statusElement.addEventListener("click", (event) => this.handleStatusClick(event));
     this.mapOverlayElement.addEventListener("click", (event) => this.handleStatusClick(event));
   }
@@ -75,14 +85,29 @@ export class Game {
     this.enemies = enemies;
     this.items = items;
     this.floor = floor;
-    this.fov = new Fov(8);
+    this.fov = new Fov(this.config.fov.radius);
     this.logger = new Logger();
     this.isGameOver = false;
     this.pendingBagItem = null;
     this.input.setEnabled(true);
     this.renderer.resizeToMap(map);
-    this.logger.add(`${this.floor}階に到着した。`);
+    this.logger.add(this.config.messages.floorArrive(this.floor));
+    this.config.hooks?.onFloorChange?.({ game: this, floor: this.floor });
     this.refresh();
+  }
+
+  resetToUnstarted(): void {
+    this.enemies = [];
+    this.items = [];
+    this.logger = new Logger();
+    this.isGameOver = false;
+    this.pendingBagItem = null;
+    this.input.setEnabled(false);
+    this.renderer.clear();
+    this.statusElement.innerHTML = "";
+    this.logElement.innerHTML = "";
+    this.mapOverlayElement.classList.remove("is-open");
+    this.mapOverlayElement.innerHTML = "";
   }
 
   /** 階段移動の判定。プレイヤーが階段タイルの上にいる時だけ次の階へ進める。 */
@@ -123,17 +148,20 @@ export class Game {
   attack(attacker: Actor, defender: Actor): void {
     const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
     defender.damage(attackPower);
-    this.logger.add(`${attacker.name}が${defender.name}に${attackPower}ダメージ。`);
+    this.logger.add(this.config.messages.attack(attacker, defender, attackPower));
+    this.config.hooks?.onAttack?.({ game: this, attacker, defender, damage: attackPower });
 
     if (defender.isDead) {
       const defeatedEnemy = this.enemies.find((enemy) => enemy.id === defender.id);
       if (defeatedEnemy && attacker.id === this.player.id) {
         this.player.exp += defeatedEnemy.expValue;
-        this.logger.add(`${defeatedEnemy.name}を倒した（+${defeatedEnemy.expValue} EXP）`);
+        this.logger.add(this.config.messages.defeatWithExp(defeatedEnemy.name, defeatedEnemy.expValue));
         this.checkPlayerLevelUp();
       } else {
-        this.logger.add(`${defender.name}を倒した。`);
+        this.logger.add(this.config.messages.defeat(defender.name));
       }
+
+      this.config.hooks?.onDeath?.({ game: this, actor: defender });
 
       this.enemies = this.enemies.filter((enemy) => enemy.id !== defender.id);
 
@@ -149,18 +177,19 @@ export class Game {
     if (!item) return;
 
     item.onPickup(this.player, this);
+    this.config.hooks?.onPickup?.({ game: this, itemName: item.name });
     this.items = this.items.filter((candidate) => candidate.id !== item.id);
   }
 
   /** バッグへ入るアイテムを拾う。満杯ならUIで入れ替え判断を待つ。 */
   offerBagItem(item: BagItem): void {
     if (this.player.addItem(item)) {
-      this.logger.add(`${item.name}を拾った。バッグに入れた。`);
+      this.logger.add(this.config.messages.pickupToBag(item.name));
       return;
     }
 
     this.pendingBagItem = item;
-    this.logger.add(`バッグがいっぱいだ。${item.name}をどうする？`);
+    this.logger.add(this.config.messages.bagFull(item.name));
   }
 
   /** ゲーム状態を画面とUIへ反映する。 */
@@ -175,8 +204,9 @@ export class Game {
   endGame(): void {
     this.isGameOver = true;
     this.input.setEnabled(false);
-    this.logger.add("プレイヤーは倒れた。");
-    this.logger.add("Enterキーで新しいゲームを開始。");
+    this.logger.add(this.config.messages.gameOver());
+    this.logger.add(this.config.messages.restart());
+    this.config.hooks?.onGameOver?.({ game: this });
   }
 
   /**
@@ -186,7 +216,7 @@ export class Game {
   private handlePlayerMove(direction: Direction): void {
     if (this.isGameOver) return;
     if (this.pendingBagItem) {
-      this.logger.add("バッグの整理を先に決める必要がある。");
+      this.logger.add(this.config.messages.blockedByBagChoice());
       this.refresh();
       return;
     }
@@ -204,7 +234,7 @@ export class Game {
         return;
       }
     } else {
-      this.logger.add("壁に阻まれた。");
+      this.logger.add(this.config.messages.blockedByWall());
       this.refresh();
       return;
     }
@@ -241,7 +271,7 @@ export class Game {
   private renderBagControls(): string {
     return [
       '<div class="bag-actions">',
-      '<button type="button" data-action="use-item">使う</button>',
+      '<button type="button" data-action="open-bag-for-use">使う</button>',
       `<button type="button" data-action="toggle-bag">${this.isBagOpen ? "閉じる" : "中身を見る"}</button>`,
       "</div>",
     ].join("");
@@ -249,7 +279,12 @@ export class Game {
 
   private renderBagContents(): string {
     const items = this.player.itemBag.length > 0
-      ? this.player.itemBag.map((item) => `<li>${item.name} HP +${item.healAmount}</li>`).join("")
+      ? this.player.itemBag.map((item, index) => [
+        "<li>",
+        `<span>${item.name} ${item.description}</span>`,
+        `<button type="button" data-action="use-bag-item" data-index="${index}">使う</button>`,
+        "</li>",
+      ].join("")).join("")
       : "<li>空</li>";
 
     return `<div class="bag-contents"><strong>バッグ</strong><ul>${items}</ul></div>`;
@@ -263,7 +298,7 @@ export class Game {
     const dropOptions = this.player.itemBag
       .map((item, index) => [
         '<li>',
-        `<span>${item.name} HP +${item.healAmount}</span>`,
+        `<span>${item.name} ${item.description}</span>`,
         `<button type="button" data-action="replace-bag-item" data-index="${index}">これを捨てる</button>`,
         "</li>",
       ].join(""))
@@ -295,8 +330,8 @@ export class Game {
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.dataset.action;
-    if (action === "use-item") {
-      this.useBagItem();
+    if (action === "open-bag-for-use") {
+      this.openBagForUse();
       return;
     }
 
@@ -311,28 +346,57 @@ export class Game {
       return;
     }
 
+    if (action === "use-bag-item") {
+      this.useBagItem(Number(target.dataset.index));
+      return;
+    }
+
     if (action === "discard-picked-item") {
       this.discardPendingBagItem();
     }
   }
 
-  /** バッグ内の回復アイテムを使う。 */
-  private useBagItem(): void {
+  /** バッグを開いて使用するアイテムを選べる状態にする。 */
+  private openBagForUse(): void {
     if (this.isGameOver) return;
     if (this.pendingBagItem) {
-      this.logger.add("バッグの整理を先に決める必要がある。");
+      this.logger.add(this.config.messages.blockedByBagChoice());
       this.refresh();
       return;
     }
 
-    const result = this.player.useHealingItem();
-    if (!result) {
-      this.logger.add("バッグに使えるアイテムがない。");
+    if (this.player.itemBag.length === 0) {
+      this.logger.add(this.config.messages.noUsableItem());
+    } else {
+      this.isBagOpen = true;
+    }
+
+    this.refresh();
+  }
+
+  /** バッグ内で選択したアイテムを使う。 */
+  private useBagItem(index: number): void {
+    if (this.isGameOver) return;
+    if (this.pendingBagItem) {
+      this.logger.add(this.config.messages.blockedByBagChoice());
       this.refresh();
       return;
     }
 
-    this.logger.add(`${result.name}を使った。HP +${result.healed}。`);
+    const item = this.player.takeBagItemAt(index);
+    if (!item) {
+      this.logger.add(this.config.messages.noUsableItem());
+      this.refresh();
+      return;
+    }
+
+    this.itemEffectRegistry.run(item.effectId, {
+      game: this,
+      player: this.player,
+      itemName: item.name,
+      params: item.params,
+      source: "use",
+    });
     this.refresh();
   }
 
@@ -342,13 +406,13 @@ export class Game {
     const picked = this.pendingBagItem;
     const dropped = this.player.replaceItemAt(dropIndex, picked);
     if (!dropped) {
-      this.logger.add("捨てるアイテムを選べなかった。");
+      this.logger.add(this.config.messages.invalidBagSelection());
       this.refresh();
       return;
     }
 
     this.pendingBagItem = null;
-    this.logger.add(`${picked.name}をバッグに入れた。${dropped.name}を捨てた。`);
+    this.logger.add(this.config.messages.bagItemReplaced(picked.name, dropped.name));
     this.finishPlayerAction();
   }
 
@@ -357,7 +421,7 @@ export class Game {
 
     const discarded = this.pendingBagItem;
     this.pendingBagItem = null;
-    this.logger.add(`${discarded.name}を捨てた。`);
+    this.logger.add(this.config.messages.pickedItemDiscarded(discarded.name));
     this.finishPlayerAction();
   }
 
@@ -372,9 +436,13 @@ export class Game {
 
   /** ターンごとのレベルアップ判定とログ出力。 */
   private checkPlayerLevelUp(): void {
-    const levelUps = this.player.checkLevelUp();
+    const levelUps = this.player.checkLevelUp(
+      this.config.progression.nextLevelMultiplier,
+      this.config.progression.hpGainPerLevel,
+      this.config.progression.attackGainPerLevel,
+    );
     for (let i = 0; i < levelUps; i += 1) {
-      this.logger.add(`Level Up! Lv.${this.player.level - levelUps + i + 1}`);
+      this.logger.add(this.config.messages.levelUp(this.player.level - levelUps + i + 1));
     }
   }
 }

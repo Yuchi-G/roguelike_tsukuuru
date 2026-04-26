@@ -39,6 +39,10 @@ body {
   width: min(100%, 1260px);
 }
 
+.map-panel {
+  position: relative;
+}
+
 /* ドット絵風の文字表示がぼやけにくいようにする。 */
 canvas {
   display: block;
@@ -47,6 +51,28 @@ canvas {
   image-rendering: pixelated;
   background: #050605;
   border: 1px solid #273027;
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 6, 5, 0.36);
+  border: 1px solid rgba(39, 48, 39, 0.78);
+}
+
+.map-overlay.is-open {
+  display: grid;
+}
+
+.map-overlay .bag-choice {
+  width: min(420px, 100%);
+  max-height: min(520px, calc(100% - 24px));
+  overflow: auto;
+  background: rgba(22, 19, 12, 0.78);
+  backdrop-filter: blur(1px);
 }
 
 /* HP、階層、操作説明、ログをまとめる右側パネル。 */
@@ -92,6 +118,85 @@ h2 {
   gap: 12px;
   border-bottom: 1px solid #222a22;
   padding-bottom: 6px;
+}
+
+.bag-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.bag-actions button,
+.bag-choice button {
+  border: 1px solid #43523f;
+  background: #182018;
+  color: #e7e2d2;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.bag-actions button:hover,
+.bag-choice button:hover {
+  border-color: #6c855e;
+  background: #202b20;
+}
+
+.bag-contents {
+  border: 1px solid #273027;
+  background: #0c100c;
+  padding: 8px;
+  color: #c9c5b4;
+  font-size: 13px;
+}
+
+.bag-contents strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #f0d982;
+}
+
+.bag-contents ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bag-choice {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #5f5030;
+  background: #16130c;
+  padding: 8px;
+  color: #e7e2d2;
+  font-size: 13px;
+}
+
+.bag-choice strong {
+  color: #f0d982;
+}
+
+.bag-choice p {
+  margin: 0;
+  color: #c9c5b4;
+}
+
+.bag-choice ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.bag-choice li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
 
 /* 新しいログが上に来るよう、表示順を反転している。 */

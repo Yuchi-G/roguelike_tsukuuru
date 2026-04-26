@@ -26,7 +26,6 @@ export class Item extends Entity {
       return;
     }
 
-    const healed = player.heal(this.healAmount);
-    game.logger.add(`${this.name}を拾った。HP +${healed}。`);
+    game.offerBagItem({ name: this.name, healAmount: this.healAmount });
   }
 }

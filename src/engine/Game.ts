@@ -12,7 +12,7 @@ import { Renderer } from "./Renderer";
 import { TurnManager } from "./TurnManager";
 import type { Enemy } from "../game/Enemy";
 import type { Item } from "../game/Item";
-import type { Player } from "../game/Player";
+import type { BagItem, Player } from "../game/Player";
 
 /**
  * ローグライクの1プレイ中の状態を持つクラス。
@@ -31,14 +31,20 @@ export class Game {
   private renderer: Renderer;
   private input = new InputManager();
   private turnManager = new TurnManager();
+  private isBagOpen = false;
+  private pendingBagItem: BagItem | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
+    private mapOverlayElement: HTMLElement,
     private statusElement: HTMLElement,
     private logElement: HTMLElement,
   ) {
     this.renderer = new Renderer(canvas);
     this.input.setMoveHandler((direction) => this.handlePlayerMove(direction));
+    this.input.setUseItemHandler(() => this.useBagItem());
+    this.statusElement.addEventListener("click", (event) => this.handleStatusClick(event));
+    this.mapOverlayElement.addEventListener("click", (event) => this.handleStatusClick(event));
   }
 
   /** ゲームオーバー中だけEnterで新しいゲームを開始する。 */
@@ -72,6 +78,7 @@ export class Game {
     this.fov = new Fov(8);
     this.logger = new Logger();
     this.isGameOver = false;
+    this.pendingBagItem = null;
     this.input.setEnabled(true);
     this.renderer.resizeToMap(map);
     this.logger.add(`${this.floor}階に到着した。`);
@@ -145,11 +152,23 @@ export class Game {
     this.items = this.items.filter((candidate) => candidate.id !== item.id);
   }
 
+  /** バッグへ入るアイテムを拾う。満杯ならUIで入れ替え判断を待つ。 */
+  offerBagItem(item: BagItem): void {
+    if (this.player.addItem(item)) {
+      this.logger.add(`${item.name}を拾った。バッグに入れた。`);
+      return;
+    }
+
+    this.pendingBagItem = item;
+    this.logger.add(`バッグがいっぱいだ。${item.name}をどうする？`);
+  }
+
   /** ゲーム状態を画面とUIへ反映する。 */
   refresh(): void {
     this.fov.compute(this.map, this.player.x, this.player.y);
     this.renderer.render(this.map, this.entities, this.fov, this.isGameOver);
     this.renderUi();
+    this.renderMapOverlay();
   }
 
   /** プレイヤー死亡時のゲームオーバー処理。 */
@@ -166,6 +185,11 @@ export class Game {
    */
   private handlePlayerMove(direction: Direction): void {
     if (this.isGameOver) return;
+    if (this.pendingBagItem) {
+      this.logger.add("バッグの整理を先に決める必要がある。");
+      this.refresh();
+      return;
+    }
 
     const targetX = this.player.x + direction.dx;
     const targetY = this.player.y + direction.dy;
@@ -175,18 +199,17 @@ export class Game {
       this.attack(this.player, enemy);
     } else if (this.tryMoveActor(this.player, direction.dx, direction.dy)) {
       this.pickupItems();
+      if (this.pendingBagItem) {
+        this.refresh();
+        return;
+      }
     } else {
       this.logger.add("壁に阻まれた。");
       this.refresh();
       return;
     }
 
-    if (!this.isGameOver) {
-      this.turnManager.runEnemyTurn(this);
-      this.checkPlayerLevelUp();
-    }
-
-    this.refresh();
+    this.finishPlayerAction();
   }
 
   /** HPや階層、ログなどのHTML UIを更新する。 */
@@ -197,8 +220,11 @@ export class Game {
       this.statusRow("HP", `${this.player.hp}/${this.player.maxHp}`),
       this.statusRow("攻撃力", `${this.player.getAttack()}`),
       this.statusRow("武器", this.player.weapon ? `+${this.player.weapon.atk}` : "なし"),
+      this.statusRow("バッグ", `${this.player.itemBag.length}/${this.player.maxBagItems}`),
+      this.renderBagControls(),
+      this.isBagOpen ? this.renderBagContents() : "",
       this.statusRow("階層", `${this.floor}階`),
-      this.statusRow("操作", this.isGameOver ? "Enter: 再開" : "矢印 / WASD / Space"),
+      this.statusRow("操作", this.isGameOver ? "Enter: 再開" : "矢印 / WASD / Space / H"),
       this.isGameOver ? '<div class="game-over">GAME OVER<br />Press Enter</div>' : "",
     ].join("");
 
@@ -210,6 +236,138 @@ export class Game {
 
   private statusRow(label: string, value: string): string {
     return `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`;
+  }
+
+  private renderBagControls(): string {
+    return [
+      '<div class="bag-actions">',
+      '<button type="button" data-action="use-item">使う</button>',
+      `<button type="button" data-action="toggle-bag">${this.isBagOpen ? "閉じる" : "中身を見る"}</button>`,
+      "</div>",
+    ].join("");
+  }
+
+  private renderBagContents(): string {
+    const items = this.player.itemBag.length > 0
+      ? this.player.itemBag.map((item) => `<li>${item.name} HP +${item.healAmount}</li>`).join("")
+      : "<li>空</li>";
+
+    return `<div class="bag-contents"><strong>バッグ</strong><ul>${items}</ul></div>`;
+  }
+
+  private renderBagChoice(): string {
+    if (!this.pendingBagItem) {
+      return "";
+    }
+
+    const dropOptions = this.player.itemBag
+      .map((item, index) => [
+        '<li>',
+        `<span>${item.name} HP +${item.healAmount}</span>`,
+        `<button type="button" data-action="replace-bag-item" data-index="${index}">これを捨てる</button>`,
+        "</li>",
+      ].join(""))
+      .join("");
+
+    return [
+      '<div class="bag-choice">',
+      `<strong>${this.pendingBagItem.name}を拾う？</strong>`,
+      '<p>拾う場合は、捨てるアイテムを選んでください。</p>',
+      `<ul>${dropOptions}</ul>`,
+      '<button type="button" data-action="discard-picked-item">拾わず捨てる</button>',
+      "</div>",
+    ].join("");
+  }
+
+  private renderMapOverlay(): void {
+    if (!this.pendingBagItem) {
+      this.mapOverlayElement.classList.remove("is-open");
+      this.mapOverlayElement.innerHTML = "";
+      return;
+    }
+
+    this.mapOverlayElement.classList.add("is-open");
+    this.mapOverlayElement.innerHTML = this.renderBagChoice();
+  }
+
+  private handleStatusClick(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const action = target.dataset.action;
+    if (action === "use-item") {
+      this.useBagItem();
+      return;
+    }
+
+    if (action === "toggle-bag") {
+      this.isBagOpen = !this.isBagOpen;
+      this.refresh();
+      return;
+    }
+
+    if (action === "replace-bag-item") {
+      this.replaceBagItem(Number(target.dataset.index));
+      return;
+    }
+
+    if (action === "discard-picked-item") {
+      this.discardPendingBagItem();
+    }
+  }
+
+  /** バッグ内の回復アイテムを使う。 */
+  private useBagItem(): void {
+    if (this.isGameOver) return;
+    if (this.pendingBagItem) {
+      this.logger.add("バッグの整理を先に決める必要がある。");
+      this.refresh();
+      return;
+    }
+
+    const result = this.player.useHealingItem();
+    if (!result) {
+      this.logger.add("バッグに使えるアイテムがない。");
+      this.refresh();
+      return;
+    }
+
+    this.logger.add(`${result.name}を使った。HP +${result.healed}。`);
+    this.refresh();
+  }
+
+  private replaceBagItem(dropIndex: number): void {
+    if (!this.pendingBagItem) return;
+
+    const picked = this.pendingBagItem;
+    const dropped = this.player.replaceItemAt(dropIndex, picked);
+    if (!dropped) {
+      this.logger.add("捨てるアイテムを選べなかった。");
+      this.refresh();
+      return;
+    }
+
+    this.pendingBagItem = null;
+    this.logger.add(`${picked.name}をバッグに入れた。${dropped.name}を捨てた。`);
+    this.finishPlayerAction();
+  }
+
+  private discardPendingBagItem(): void {
+    if (!this.pendingBagItem) return;
+
+    const discarded = this.pendingBagItem;
+    this.pendingBagItem = null;
+    this.logger.add(`${discarded.name}を捨てた。`);
+    this.finishPlayerAction();
+  }
+
+  private finishPlayerAction(): void {
+    if (!this.isGameOver) {
+      this.turnManager.runEnemyTurn(this);
+      this.checkPlayerLevelUp();
+    }
+
+    this.refresh();
   }
 
   /** ターンごとのレベルアップ判定とログ出力。 */

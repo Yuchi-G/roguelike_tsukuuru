@@ -12,7 +12,10 @@
   <body>
     <div id="app">
       <main class="game-shell">
-        <canvas id="game-canvas" width="960" height="640" aria-label="roguelike game canvas"></canvas>
+        <div class="map-panel">
+          <canvas id="game-canvas" width="960" height="640" aria-label="roguelike game canvas"></canvas>
+          <div id="map-overlay" class="map-overlay" aria-live="polite"></div>
+        </div>
         <aside class="side-panel">
           <section class="panel-block">
             <h1>Roguelike Tsukuuru</h1>

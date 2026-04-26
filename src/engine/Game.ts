@@ -11,6 +11,7 @@ import { createDefaultItemEffectRegistry, type ItemEffectRegistry } from "./Item
 import { Logger } from "./Logger";
 import type { GameMap } from "./Map";
 import { Renderer } from "./Renderer";
+import { Tile } from "./Tile";
 import { TurnManager } from "./TurnManager";
 import type { GameConfig } from "./GameConfig";
 import type { Enemy } from "../game/Enemy";
@@ -38,6 +39,8 @@ export class Game {
   private turnManager = new TurnManager();
   private isBagOpen = false;
   private pendingBagItem: BagItem | null = null;
+  private onOpenConfig: (() => void) | null = null;
+  private onQuitGame: (() => void) | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -75,6 +78,16 @@ export class Game {
     });
   }
 
+  /** プレイ中に設定画面へ戻る処理を登録する。 */
+  setOpenConfigHandler(handler: () => void): void {
+    this.onOpenConfig = handler;
+  }
+
+  /** 現在のゲームを破棄して設定画面へ戻る処理を登録する。 */
+  setQuitGameHandler(handler: () => void): void {
+    this.onQuitGame = handler;
+  }
+
   /**
    * 新しい階層を開始する。
    * マップや敵などの階層単位の状態を入れ替え、視界とログを初期化する。
@@ -108,6 +121,21 @@ export class Game {
     this.logElement.innerHTML = "";
     this.mapOverlayElement.classList.remove("is-open");
     this.mapOverlayElement.innerHTML = "";
+  }
+
+  pauseForConfig(): void {
+    this.input.setEnabled(false);
+  }
+
+  resumeAfterConfigChange(): void {
+    this.input.setEnabled(!this.isGameOver);
+    this.fov = new Fov(this.config.fov.radius);
+    this.applyPlayerConfigToCurrentPlayer();
+    if (this.map) {
+      this.applyTileConfigToCurrentMap();
+      this.renderer.resizeToMap(this.map);
+      this.refresh();
+    }
   }
 
   /** 階段移動の判定。プレイヤーが階段タイルの上にいる時だけ次の階へ進める。 */
@@ -255,6 +283,8 @@ export class Game {
       this.isBagOpen ? this.renderBagContents() : "",
       this.statusRow("階層", `${this.floor}階`),
       this.statusRow("操作", this.isGameOver ? "Enter: 再開" : "矢印 / WASD / Space / H"),
+      '<button class="status-command" type="button" data-action="open-config">設定値を変更</button>',
+      '<button class="status-command danger" type="button" data-action="quit-game">ゲームをやめる</button>',
       this.isGameOver ? '<div class="game-over">GAME OVER<br />Press Enter</div>' : "",
     ].join("");
 
@@ -266,6 +296,23 @@ export class Game {
 
   private statusRow(label: string, value: string): string {
     return `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`;
+  }
+
+  private applyTileConfigToCurrentMap(): void {
+    for (let i = 0; i < this.map.tiles.length; i += 1) {
+      const type = this.map.tiles[i].type;
+      this.map.tiles[i] = Tile.fromDefinition(this.config.tiles[type]);
+    }
+  }
+
+  private applyPlayerConfigToCurrentPlayer(): void {
+    const gainedLevels = Math.max(0, this.player.level - this.config.player.level);
+    const previousMaxHp = this.player.maxHp;
+    const nextMaxHp = this.config.player.hp + gainedLevels * this.config.progression.hpGainPerLevel;
+    const hpDelta = nextMaxHp - previousMaxHp;
+    this.player.maxHp = nextMaxHp;
+    this.player.hp = Math.min(this.player.maxHp, Math.max(0, this.player.hp + hpDelta));
+    this.player.attackPower = this.config.player.attackPower + gainedLevels * this.config.progression.attackGainPerLevel;
   }
 
   private renderBagControls(): string {
@@ -332,6 +379,16 @@ export class Game {
     const action = target.dataset.action;
     if (action === "open-bag-for-use") {
       this.openBagForUse();
+      return;
+    }
+
+    if (action === "open-config") {
+      this.onOpenConfig?.();
+      return;
+    }
+
+    if (action === "quit-game") {
+      this.onQuitGame?.();
       return;
     }
 

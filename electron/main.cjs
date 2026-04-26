@@ -122,7 +122,7 @@ ipcMain.handle("project:set-dirty", (_event, dirty) => {
 async function saveAs(json) {
   const result = await dialog.showSaveDialog(mainWindow, {
     title: "名前を付けて保存",
-    defaultPath: currentFilePath ?? "roguelike-project.json",
+    defaultPath: currentFilePath ?? path.join(__dirname, "..", "projects", "rlt-project.json"),
     filters: [{ name: "Roguelike Project", extensions: ["json"] }],
   });
 
@@ -153,4 +153,3 @@ app.on("activate", () => {
     void createWindow();
   }
 });
-

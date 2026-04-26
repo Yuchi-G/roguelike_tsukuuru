@@ -10,8 +10,8 @@
     <title>Roguelike Tsukuuru</title>
   </head>
   <body>
-    <div id="app">
-      <main class="game-shell">
+    <div id="app" class="setup-mode">
+      <main id="game-shell" class="game-shell setup-mode">
         <div class="map-panel">
           <canvas id="game-canvas" width="960" height="640" aria-label="roguelike game canvas"></canvas>
           <div id="start-screen" class="start-screen" aria-live="polite">
@@ -23,15 +23,15 @@
           <div id="map-overlay" class="map-overlay" aria-live="polite"></div>
         </div>
         <aside class="side-panel">
-          <section class="panel-block">
+          <section class="panel-block status-section">
             <h1>Roguelike Tsukuuru</h1>
             <div id="status" class="status"></div>
           </section>
-          <section class="panel-block">
+          <section class="panel-block log-section">
             <h2>ログ</h2>
             <ol id="log" class="log"></ol>
           </section>
-          <section class="panel-block">
+          <section class="panel-block config-section">
             <h2>設定</h2>
             <div id="config-panel" class="config-panel"></div>
           </section>

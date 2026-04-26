@@ -118,7 +118,15 @@ export class Game {
     this.logger.add(`${attacker.name}が${defender.name}に${attacker.attackPower}ダメージ。`);
 
     if (defender.isDead) {
-      this.logger.add(`${defender.name}を倒した。`);
+      const defeatedEnemy = this.enemies.find((enemy) => enemy.id === defender.id);
+      if (defeatedEnemy && attacker.id === this.player.id) {
+        this.player.exp += defeatedEnemy.expValue;
+        this.logger.add(`${defeatedEnemy.name}を倒した（+${defeatedEnemy.expValue} EXP）`);
+        this.checkPlayerLevelUp();
+      } else {
+        this.logger.add(`${defender.name}を倒した。`);
+      }
+
       this.enemies = this.enemies.filter((enemy) => enemy.id !== defender.id);
 
       if (defender.id === this.player.id) {
@@ -174,6 +182,7 @@ export class Game {
 
     if (!this.isGameOver) {
       this.turnManager.runEnemyTurn(this);
+      this.checkPlayerLevelUp();
     }
 
     this.refresh();
@@ -182,6 +191,8 @@ export class Game {
   /** HPや階層、ログなどのHTML UIを更新する。 */
   private renderUi(): void {
     this.statusElement.innerHTML = [
+      this.statusRow("LV", `${this.player.level}`),
+      this.statusRow("EXP", `${this.player.exp}/${this.player.nextLevelExp}`),
       this.statusRow("HP", `${this.player.hp}/${this.player.maxHp}`),
       this.statusRow("攻撃力", `${this.player.attackPower}`),
       this.statusRow("階層", `${this.floor}階`),
@@ -197,5 +208,13 @@ export class Game {
 
   private statusRow(label: string, value: string): string {
     return `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`;
+  }
+
+  /** ターンごとのレベルアップ判定とログ出力。 */
+  private checkPlayerLevelUp(): void {
+    const levelUps = this.player.checkLevelUp();
+    for (let i = 0; i < levelUps; i += 1) {
+      this.logger.add(`Level Up! Lv.${this.player.level - levelUps + i + 1}`);
+    }
   }
 }

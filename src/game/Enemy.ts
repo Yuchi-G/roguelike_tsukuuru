@@ -7,6 +7,8 @@ import { Actor } from "../engine/Entity";
 
 /** プレイヤーを追跡する基本的な敵キャラクター。 */
 export class Enemy extends Actor {
+  public expValue = 5;
+
   constructor(x: number, y: number, floor = 1) {
     // 5階ごとに少し強くする。細かいバランス調整は後で差し替えやすい形にしている。
     const strengthTier = Math.floor((floor - 1) / 5);

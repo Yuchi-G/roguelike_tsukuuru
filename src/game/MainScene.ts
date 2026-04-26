@@ -19,9 +19,9 @@ export class MainScene {
 
   /**
    * 新しい階層を生成する。
-   * 次の階へ進む時は、前の階のHPを新しいプレイヤーへ引き継ぐ。
+   * 次の階へ進む時は、前の階の成長状態を新しいプレイヤーへ引き継ぐ。
    */
-  load(floor = 1, carriedHp?: number): void {
+  load(floor = 1, carriedPlayer?: Player): void {
     this.floor = floor;
     const generator = new DungeonGenerator(48, 32);
     const dungeon = generator.generate();
@@ -33,8 +33,13 @@ export class MainScene {
 
     const [playerX, playerY] = generator.center(rooms[0]);
     const player = new Player(playerX, playerY);
-    if (carriedHp !== undefined) {
-      player.hp = Math.min(player.maxHp, Math.max(1, carriedHp));
+    if (carriedPlayer) {
+      player.level = carriedPlayer.level;
+      player.exp = carriedPlayer.exp;
+      player.nextLevelExp = carriedPlayer.nextLevelExp;
+      player.maxHp = carriedPlayer.maxHp;
+      player.hp = Math.min(player.maxHp, Math.max(1, carriedPlayer.hp));
+      player.attackPower = carriedPlayer.attackPower;
     }
     const enemies: Enemy[] = [];
     const items: Item[] = [];
@@ -67,7 +72,7 @@ export class MainScene {
       return;
     }
 
-    this.load(this.floor + 1, this.game.player.hp);
+    this.load(this.floor + 1, this.game.player);
   }
 
   /** 配置済みの場所を避けながら床座標を探す。 */

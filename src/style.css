@@ -30,6 +30,16 @@ body {
   padding: 24px;
 }
 
+.desktop-only {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f0d982;
+  background: #080908;
+  font-size: 16px;
+}
+
 /* Canvasとサイドパネルを横並びにする基本レイアウト。 */
 .game-shell {
   display: grid;

@@ -9,6 +9,11 @@ import { Game } from "./engine/Game";
 import { MainScene } from "./game/MainScene";
 import { sampleGameConfig } from "./game/sampleGameConfig";
 
+if (!window.desktopProject) {
+  document.body.innerHTML = '<div class="desktop-only">このアプリはElectronから起動してください。</div>';
+  throw new Error("This app must be launched from Electron.");
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
 const mapOverlayElement = document.querySelector<HTMLElement>("#map-overlay");
 const statusElement = document.querySelector<HTMLElement>("#status");

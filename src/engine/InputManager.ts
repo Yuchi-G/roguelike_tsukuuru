@@ -12,6 +12,7 @@ export class InputManager {
   private onMove: ((direction: Direction) => void) | null = null;
   private onRestart: (() => void) | null = null;
   private onAction: (() => void) | null = null;
+  private onUseItem: (() => void) | null = null;
   private enabled = true;
 
   constructor() {
@@ -33,6 +34,11 @@ export class InputManager {
     this.onAction = handler;
   }
 
+  /** バッグ内のアイテムを使う処理を登録する。 */
+  setUseItemHandler(handler: () => void): void {
+    this.onUseItem = handler;
+  }
+
   /** ゲームオーバー中は通常操作を止めるための切り替え。 */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
@@ -51,6 +57,12 @@ export class InputManager {
     if (event.key === " ") {
       event.preventDefault();
       this.onAction?.();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "h") {
+      event.preventDefault();
+      this.onUseItem?.();
       return;
     }
 

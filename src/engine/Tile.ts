@@ -10,6 +10,8 @@ export type TileDefinition = {
   color: string;
   background: string;
   blocksMovement: boolean;
+  /** 0〜1: ダンジョン生成後に床タイルへ散布する割合。wall/floor/stairsには無効。 */
+  scatterRate?: number;
 };
 
 export const defaultTileDefinitions: Record<TileType, TileDefinition> = {
@@ -38,18 +40,8 @@ export class Tile {
     );
   }
 
-  /** 壁タイル。プレイヤーや敵は通れない。 */
+  /** 壁タイル。マップのデフォルト値として使う。 */
   static wall(): Tile {
     return Tile.fromDefinition(defaultTileDefinitions.wall);
-  }
-
-  /** 床タイル。通常の移動先として使う。 */
-  static floor(): Tile {
-    return Tile.fromDefinition(defaultTileDefinitions.floor);
-  }
-
-  /** 階段タイル。Spaceキーで次の階へ進む場所。 */
-  static stairs(): Tile {
-    return Tile.fromDefinition(defaultTileDefinitions.stairs);
   }
 }

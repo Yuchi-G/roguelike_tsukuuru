@@ -22,10 +22,6 @@ export type DungeonConfig = {
   maxRoomSize: number;
 };
 
-export type EquipmentDefinition = {
-  atk: number;
-};
-
 export type EffectParams = Record<string, number | string | boolean>;
 
 export type EnemyDefinition = {
@@ -140,4 +136,8 @@ export type GameConfig = {
   progression: ProgressionConfig;
   messages: GameMessages;
   hooks?: GameHooks;
+  /** ConfigPanelの敵AI選択肢に追加するカスタムAI ID一覧。実装はmain.tsでaiRegistryへ登録する。 */
+  customAiIds?: string[];
+  /** ConfigPanelのアイテム効果選択肢に追加するカスタム効果 ID一覧。実装はmain.tsでitemEffectRegistryへ登録する。 */
+  customEffectIds?: string[];
 };

@@ -1,0 +1,72 @@
+import { DungeonGenerator } from "../engine/DungeonGenerator";
+import type { Game } from "../engine/Game";
+import { Enemy } from "./Enemy";
+import { Item } from "./Item";
+import { Player } from "./Player";
+
+export class MainScene {
+  private floor = 1;
+
+  constructor(private game: Game) {}
+
+  load(floor = 1, carriedHp?: number): void {
+    this.floor = floor;
+    const generator = new DungeonGenerator(48, 32);
+    const dungeon = generator.generate();
+    const rooms = dungeon.rooms;
+
+    if (rooms.length === 0) {
+      throw new Error("Dungeon generation failed: no rooms created.");
+    }
+
+    const [playerX, playerY] = generator.center(rooms[0]);
+    const player = new Player(playerX, playerY);
+    if (carriedHp !== undefined) {
+      player.hp = Math.min(player.maxHp, Math.max(1, carriedHp));
+    }
+    const enemies: Enemy[] = [];
+    const items: Item[] = [];
+    const occupied = new Set<string>([this.key(playerX, playerY)]);
+
+    for (let i = 1; i < rooms.length; i += 1) {
+      const enemyCount = Math.random() < 0.7 ? 1 : 2;
+      for (let j = 0; j < enemyCount; j += 1) {
+        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
+        enemies.push(new Enemy(x, y, this.floor));
+        occupied.add(this.key(x, y));
+      }
+
+      if (Math.random() < 0.55) {
+        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
+        items.push(new Item(x, y, "回復薬", 8));
+        occupied.add(this.key(x, y));
+      }
+    }
+
+    this.game.start(dungeon.map, player, enemies.slice(0, 12), items.slice(0, 8), this.floor);
+  }
+
+  goToNextFloor(): void {
+    if (!this.game.isPlayerOnStairs()) {
+      this.game.logger.add("階段の上でSpaceキーを押す必要がある。");
+      this.game.refresh();
+      return;
+    }
+
+    this.load(this.floor + 1, this.game.player.hp);
+  }
+
+  private unoccupiedFloor(generator: DungeonGenerator, rooms: Array<{ x: number; y: number; width: number; height: number }>, occupied: Set<string>): [number, number] {
+    for (let attempts = 0; attempts < 100; attempts += 1) {
+      const [x, y] = generator.randomFloorPosition(rooms);
+      if (!occupied.has(this.key(x, y))) {
+        return [x, y];
+      }
+    }
+    return generator.center(rooms[0]);
+  }
+
+  private key(x: number, y: number): string {
+    return `${x},${y}`;
+  }
+}

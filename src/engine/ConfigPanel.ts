@@ -24,8 +24,8 @@ const messageTemplates: Record<MessageKey, string> = {
   useStairsPrompt: "階段の上でSpaceキーを押す必要がある。",
 };
 
-const aiOptions = ["chase", "stationary", "random"];
-const effectOptions = ["heal", "equipWeapon"];
+const defaultAiOptions = ["chase", "stationary", "random"];
+const defaultEffectOptions = ["heal", "equipWeapon"];
 const projectSchemaVersion = 2;
 
 export class ConfigPanel {
@@ -52,6 +52,16 @@ export class ConfigPanel {
 
   refresh(): void {
     this.render();
+  }
+
+  private get aiOptions(): string[] {
+    const custom = this.config.customAiIds ?? [];
+    return [...defaultAiOptions, ...custom.filter((id) => !defaultAiOptions.includes(id))];
+  }
+
+  private get effectOptions(): string[] {
+    const custom = this.config.customEffectIds ?? [];
+    return [...defaultEffectOptions, ...custom.filter((id) => !defaultEffectOptions.includes(id))];
   }
 
   private render(): void {
@@ -138,7 +148,7 @@ export class ConfigPanel {
       this.numberInput("HP", "newEnemy.maxHp", 8, 1),
       this.numberInput("攻撃", "newEnemy.attackPower", 2, 0),
       this.numberInput("EXP", "newEnemy.expValue", 4, 0),
-      this.selectInput("AI", "newEnemy.aiId", "chase", aiOptions),
+      this.selectInput("AI", "newEnemy.aiId", "chase", this.aiOptions),
       this.numberInput("初期出現重み", "newEnemy.weight", 3, 0),
       "</div>",
       "</fieldset>",
@@ -157,7 +167,16 @@ export class ConfigPanel {
       this.numberInput("HP", `${prefix}.maxHp`, enemy.maxHp, 1),
       this.numberInput("攻撃", `${prefix}.attackPower`, enemy.attackPower, 0),
       this.numberInput("EXP", `${prefix}.expValue`, enemy.expValue, 0),
-      this.selectInput("AI", `${prefix}.aiId`, enemy.aiId, aiOptions),
+      this.selectInput("AI", `${prefix}.aiId`, enemy.aiId, this.aiOptions),
+      ...this.config.floorRules.floors.map((rule) => {
+        const entry = rule.enemyTable.find((e) => e.enemyId === enemy.id);
+        return this.numberInput(
+          `出現重み(${rule.id})`,
+          `enemy.${enemy.id}.weight.${rule.id}`,
+          entry?.weight ?? 0,
+          0,
+        );
+      }),
       "</div>",
     ].join("");
   }
@@ -172,7 +191,7 @@ export class ConfigPanel {
       this.textInput("名前", "newItem.name", ""),
       this.textInput("見た目", "newItem.char", "?", 1),
       this.colorInput("色", "newItem.color", "#ffffff"),
-      this.selectInput("効果", "newItem.effectId", "heal", effectOptions),
+      this.selectInput("効果", "newItem.effectId", "heal", this.effectOptions),
       this.numberInput("効果値", "newItem.amount", 5, 0),
       this.numberInput("初期出現率%", "newItem.chance", 35, 0, 100),
       "</div>",
@@ -191,7 +210,7 @@ export class ConfigPanel {
       this.textInput("名前", `${prefix}.name`, item.name),
       this.textInput("見た目", `${prefix}.char`, item.char, 1),
       this.colorInput("色", `${prefix}.color`, item.color),
-      this.selectInput("効果", `${prefix}.effectId`, effect.effectId, effectOptions),
+      this.selectInput("効果", `${prefix}.effectId`, effect.effectId, this.effectOptions),
       this.numberInput("効果値", `${prefix}.amount`, value, 0),
       "</div>",
     ].join("");
@@ -218,10 +237,6 @@ export class ConfigPanel {
       this.numberInput("敵数max", `${prefix}.enemyMax`, rule.enemyCount.max, 0),
       this.numberInput("敵HP/階", `${prefix}.hpBonus`, rule.enemyHpBonusPerFloor, 0),
       this.numberInput("敵攻撃/階", `${prefix}.attackBonus`, rule.enemyAttackBonusPerFloor, 0),
-      ...this.config.enemies.map((enemy) => {
-        const entry = rule.enemyTable.find((candidate) => candidate.enemyId === enemy.id);
-        return this.numberInput(`${enemy.name}重み`, `${prefix}.enemyWeight.${enemy.id}`, entry?.weight ?? 0, 0);
-      }),
       ...this.config.items.map((item) => {
         const entry = rule.itemDrops.find((candidate) => candidate.itemId === item.id);
         return this.numberInput(`${item.name}出現率%`, `${prefix}.itemChance.${item.id}`, Math.round((entry?.chance ?? 0) * 100), 0, 100);
@@ -231,6 +246,7 @@ export class ConfigPanel {
   }
 
   private renderTileSection(): string {
+    const coreTileTypes = new Set(["wall", "floor", "stairs"]);
     return [
       '<fieldset><legend>タイル</legend>',
       ...Object.entries(this.config.tiles).map(([type, tile]) => [
@@ -240,6 +256,9 @@ export class ConfigPanel {
         this.colorInput("文字色", `tile.${type}.color`, tile.color),
         this.colorInput("背景色", `tile.${type}.background`, tile.background),
         this.checkboxInput("通行不可", `tile.${type}.blocksMovement`, tile.blocksMovement),
+        !coreTileTypes.has(type)
+          ? this.numberInput("散布率%", `tile.${type}.scatterRate`, Math.round((tile.scatterRate ?? 0) * 100), 0, 100)
+          : "",
         "</div>",
       ].join("")),
       '<div class="config-group">',
@@ -249,6 +268,7 @@ export class ConfigPanel {
       this.colorInput("文字色", "newTile.color", "#ffffff"),
       this.colorInput("背景色", "newTile.background", "#000000"),
       this.checkboxInput("通行不可", "newTile.blocksMovement", false),
+      this.numberInput("散布率%", "newTile.scatterRate", 0, 0, 100),
       "</div>",
       "</fieldset>",
     ].join("");
@@ -364,6 +384,7 @@ export class ConfigPanel {
     this.applyEnemies(formData);
     this.applyItems(formData);
     this.applyFloorRules(formData);
+    this.applyEnemyWeights(formData);
     this.applyTiles(formData);
     this.applyMessages(formData);
   }
@@ -479,15 +500,6 @@ export class ConfigPanel {
       rule.enemyCount.max = Math.max(rule.enemyCount.min, this.numberValue(formData, `${prefix}.enemyMax`, rule.enemyCount.max));
       rule.enemyHpBonusPerFloor = this.numberValue(formData, `${prefix}.hpBonus`, rule.enemyHpBonusPerFloor);
       rule.enemyAttackBonusPerFloor = this.numberValue(formData, `${prefix}.attackBonus`, rule.enemyAttackBonusPerFloor);
-      rule.enemyTable = this.config.enemies
-        .map((enemy) => {
-          const current = rule.enemyTable.find((entry) => entry.enemyId === enemy.id);
-          return {
-            enemyId: enemy.id,
-            weight: this.numberValue(formData, `${prefix}.enemyWeight.${enemy.id}`, current?.weight ?? 0),
-          };
-        })
-        .filter((entry) => entry.weight > 0);
       rule.itemDrops = this.config.items
         .map((item) => {
           const current = rule.itemDrops.find((entry) => entry.itemId === item.id);
@@ -497,6 +509,23 @@ export class ConfigPanel {
           };
         })
         .filter((entry) => entry.chance > 0);
+    }
+  }
+
+  /** 敵セクションで編集した出現重みをフロアルールへ反映する。applyFloorRules の後に呼ぶ。 */
+  private applyEnemyWeights(formData: FormData): void {
+    for (const rule of this.config.floorRules.floors) {
+      rule.enemyTable = this.config.enemies
+        .map((enemy) => {
+          const current = rule.enemyTable.find((e) => e.enemyId === enemy.id);
+          const weight = this.numberValue(
+            formData,
+            `enemy.${enemy.id}.weight.${rule.id}`,
+            current?.weight ?? 0,
+          );
+          return { enemyId: enemy.id, weight };
+        })
+        .filter((entry) => entry.weight > 0);
     }
   }
 
@@ -521,11 +550,15 @@ export class ConfigPanel {
   }
 
   private applyTiles(formData: FormData): void {
+    const coreTileTypes = new Set(["wall", "floor", "stairs"]);
     for (const [type, tile] of Object.entries(this.config.tiles)) {
       tile.char = this.charValue(formData, `tile.${type}.char`, tile.char);
       tile.color = this.stringValue(formData, `tile.${type}.color`, tile.color);
       tile.background = this.stringValue(formData, `tile.${type}.background`, tile.background);
       tile.blocksMovement = formData.get(`tile.${type}.blocksMovement`) === "on";
+      if (!coreTileTypes.has(type)) {
+        tile.scatterRate = this.numberValue(formData, `tile.${type}.scatterRate`, Math.round((tile.scatterRate ?? 0) * 100)) / 100;
+      }
     }
 
     const id = this.idValue(formData, "newTile.id");
@@ -536,6 +569,7 @@ export class ConfigPanel {
         color: this.stringValue(formData, "newTile.color", "#ffffff"),
         background: this.stringValue(formData, "newTile.background", "#000000"),
         blocksMovement: formData.get("newTile.blocksMovement") === "on",
+        scatterRate: this.numberValue(formData, "newTile.scatterRate", 0) / 100,
       };
     }
   }
@@ -606,7 +640,9 @@ export class ConfigPanel {
   }
 
   private numberValue(formData: FormData, name: string, fallback: number): number {
-    const value = Number(formData.get(name));
+    const raw = formData.get(name);
+    if (raw === null) return fallback;
+    const value = Number(raw);
     return Number.isFinite(value) ? value : fallback;
   }
 
@@ -718,7 +754,6 @@ export class ConfigPanel {
       this.applyMessageTemplates();
       return true;
     } catch {
-      this.config.messages.invalidBagSelection = () => "プロジェクトJSONを読み込めませんでした。";
       return false;
     }
   }

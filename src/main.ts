@@ -3,6 +3,7 @@
  * HTML上のCanvasとUI要素を取得し、ゲームとシーンを起動する。
  */
 import "./style.css";
+import { chaseMove } from "./engine/AiRegistry";
 import { ConfigPanel } from "./engine/ConfigPanel";
 import { DesktopProjectStorage } from "./engine/DesktopProjectStorage";
 import { Game } from "./engine/Game";
@@ -34,6 +35,47 @@ const gameShell = gameShellElement;
 // Gameはエンジン本体、MainSceneはサンプルゲームの初期化を担当する。
 const game = new Game(canvas, mapOverlayElement, statusElement, logElement, sampleGameConfig);
 const scene = new MainScene(game, sampleGameConfig);
+
+// --- カスタムAI登録 ---
+// flee: HPが最大の50%以下になるとプレイヤーから逃げる。通常時はchaseと同じ動作。
+game.aiRegistry.register("flee", ({ game: g, enemy }) => {
+  if (enemy.hp <= enemy.maxHp * 0.5) {
+    // 逃走: プレイヤーの逆方向へ移動
+    const dx = g.player.x - enemy.x;
+    const dy = g.player.y - enemy.y;
+    const fleeX = -Math.sign(dx);
+    const fleeY = -Math.sign(dy);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (!g.tryMoveActor(enemy, fleeX, 0)) {
+        g.tryMoveActor(enemy, 0, fleeY || (Math.random() < 0.5 ? 1 : -1));
+      }
+    } else {
+      if (!g.tryMoveActor(enemy, 0, fleeY)) {
+        g.tryMoveActor(enemy, fleeX || (Math.random() < 0.5 ? 1 : -1), 0);
+      }
+    }
+    return;
+  }
+
+  // 通常時: chaseMove を再利用
+  chaseMove(g, enemy);
+});
+
+// --- カスタムアイテム効果登録 ---
+// fullHeal: 拾うとバッグに入り、使うとHPを最大まで回復する。
+game.itemEffectRegistry.register("fullHeal", ({ game: g, player, itemName, source }) => {
+  if (source === "pickup") {
+    g.offerBagItem({
+      name: itemName,
+      effectId: "fullHeal",
+      params: {},
+      description: "HP全回復",
+    });
+    return;
+  }
+  const healed = player.heal(player.maxHp);
+  g.logger.add(g.config.messages.itemUsed(itemName, healed));
+});
 let isEditingStartedGame = false;
 let configPanel: ConfigPanel;
 

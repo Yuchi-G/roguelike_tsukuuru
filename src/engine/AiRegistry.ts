@@ -25,29 +25,37 @@ export class AiRegistry {
   }
 }
 
+/**
+ * プレイヤーへ向かって1歩移動する、または隣接していれば攻撃する。
+ * 複数のAIで共通して使える移動ロジック。
+ */
+export function chaseMove(game: Game, enemy: Actor): void {
+  const dx = game.player.x - enemy.x;
+  const dy = game.player.y - enemy.y;
+  const distance = Math.abs(dx) + Math.abs(dy);
+
+  if (distance === 1) {
+    game.attack(enemy, game.player);
+    return;
+  }
+
+  const stepX = Math.sign(dx);
+  const stepY = Math.sign(dy);
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (!game.tryMoveActor(enemy, stepX, 0)) {
+      game.tryMoveActor(enemy, 0, stepY);
+    }
+  } else if (!game.tryMoveActor(enemy, 0, stepY)) {
+    game.tryMoveActor(enemy, stepX, 0);
+  }
+}
+
 export function createDefaultAiRegistry(): AiRegistry {
   const registry = new AiRegistry();
 
   registry.register("chase", ({ game, enemy }) => {
-    const dx = game.player.x - enemy.x;
-    const dy = game.player.y - enemy.y;
-    const distance = Math.abs(dx) + Math.abs(dy);
-
-    if (distance === 1) {
-      game.attack(enemy, game.player);
-      return;
-    }
-
-    const stepX = Math.sign(dx);
-    const stepY = Math.sign(dy);
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (!game.tryMoveActor(enemy, stepX, 0)) {
-        game.tryMoveActor(enemy, 0, stepY);
-      }
-    } else if (!game.tryMoveActor(enemy, 0, stepY)) {
-      game.tryMoveActor(enemy, stepX, 0);
-    }
+    chaseMove(game, enemy);
   });
 
   registry.register("stationary", () => {});

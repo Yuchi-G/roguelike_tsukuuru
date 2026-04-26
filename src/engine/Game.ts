@@ -114,8 +114,9 @@ export class Game {
    * 攻撃力ぶんHPを減らし、HPが0になった敵はマップから取り除く。
    */
   attack(attacker: Actor, defender: Actor): void {
-    defender.damage(attacker.attackPower);
-    this.logger.add(`${attacker.name}が${defender.name}に${attacker.attackPower}ダメージ。`);
+    const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
+    defender.damage(attackPower);
+    this.logger.add(`${attacker.name}が${defender.name}に${attackPower}ダメージ。`);
 
     if (defender.isDead) {
       const defeatedEnemy = this.enemies.find((enemy) => enemy.id === defender.id);
@@ -194,7 +195,8 @@ export class Game {
       this.statusRow("LV", `${this.player.level}`),
       this.statusRow("EXP", `${this.player.exp}/${this.player.nextLevelExp}`),
       this.statusRow("HP", `${this.player.hp}/${this.player.maxHp}`),
-      this.statusRow("攻撃力", `${this.player.attackPower}`),
+      this.statusRow("攻撃力", `${this.player.getAttack()}`),
+      this.statusRow("武器", this.player.weapon ? `+${this.player.weapon.atk}` : "なし"),
       this.statusRow("階層", `${this.floor}階`),
       this.statusRow("操作", this.isGameOver ? "Enter: 再開" : "矢印 / WASD / Space"),
       this.isGameOver ? '<div class="game-over">GAME OVER<br />Press Enter</div>' : "",

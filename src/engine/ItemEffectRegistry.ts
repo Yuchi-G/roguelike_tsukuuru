@@ -1,4 +1,4 @@
-import type { EffectParams, EquipmentDefinition } from "./GameConfig";
+import type { EffectParams } from "./GameConfig";
 import type { Game } from "./Game";
 import type { Player } from "../game/Player";
 
@@ -56,11 +56,21 @@ export function createDefaultItemEffectRegistry(): ItemEffectRegistry {
   registry.register("equipWeapon", ({ game, player, itemName, params, source }) => {
     if (source !== "pickup") return;
 
-    const equipment: EquipmentDefinition = {
-      atk: numberParam(params, "atk", 0),
-    };
-    player.weapon = equipment;
-    game.logger.add(game.config.messages.weaponEquipped(itemName, equipment.atk));
+    const atk = numberParam(params, "atk", 0);
+
+    // 既存の武器があればバッグへ返却を試みる（満杯の場合はロスト）
+    if (player.weapon !== null) {
+      const oldWeapon = player.weapon;
+      player.addItem({
+        name: oldWeapon.name,
+        effectId: "equipWeapon",
+        params: { atk: oldWeapon.atk },
+        description: `ATK +${oldWeapon.atk}`,
+      });
+    }
+
+    player.weapon = { name: itemName, atk };
+    game.logger.add(game.config.messages.weaponEquipped(itemName, atk));
   });
 
   return registry;

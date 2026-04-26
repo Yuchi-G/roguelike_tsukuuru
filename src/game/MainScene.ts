@@ -1,7 +1,3 @@
-/**
- * サンプルゲームの階層を組み立てるファイル。
- * エンジンの部品を使って、プレイヤー・敵・アイテムを配置する。
- */
 import { DungeonGenerator } from "../engine/DungeonGenerator";
 import { EntityFactory } from "../engine/EntityFactory";
 import type { Game } from "../engine/Game";
@@ -10,10 +6,7 @@ import { Enemy } from "./Enemy";
 import { Item } from "./Item";
 import { Player } from "./Player";
 
-/**
- * 1階層分のゲーム開始と、次の階への移動を管理するクラス。
- * ゲーム固有の初期配置はここに集め、エンジン本体をシンプルに保つ。
- */
+/** 1階層分のゲーム開始と、次の階への移動を管理するクラス。 */
 export class MainScene {
   private floor = 1;
   private factory: EntityFactory;
@@ -62,7 +55,6 @@ export class MainScene {
     const items: Item[] = [];
     const occupied = new Set<string>([this.key(playerX, playerY)]);
 
-    // 敵とアイテムは床の空きマスに置き、同じ場所に重ならないようにする。
     for (let i = 1; i < rooms.length; i += 1) {
       const rule = this.ruleForFloor(this.floor);
       const enemyCount = this.randomInt(rule.enemyCount.min, rule.enemyCount.max);

@@ -1,7 +1,3 @@
-/**
- * マップを構成するタイルを定義するファイル。
- * 壁、床、階段ごとに、表示文字・色・通行可否をまとめる。
- */
 export type TileType = string;
 
 export type TileDefinition = {

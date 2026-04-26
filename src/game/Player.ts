@@ -1,11 +1,8 @@
-/**
- * サンプルゲームのプレイヤーを定義するファイル。
- * 表示文字、初期HP、攻撃力などの基本性能をまとめる。
- */
 import { Actor } from "../engine/Entity";
 import type { EffectParams, PlayerInitialStats } from "../engine/GameConfig";
 
 export type Equipment = {
+  name: string;
   atk: number;
 };
 

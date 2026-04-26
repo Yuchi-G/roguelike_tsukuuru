@@ -1,7 +1,3 @@
-/**
- * ゲーム全体の進行を管理する中心ファイル。
- * マップ、エンティティ、入力、ターン、描画、UI更新をここでつなぐ。
- */
 import { getBlockingEntityAt } from "./Collision";
 import type { Actor, Entity } from "./Entity";
 import { Fov } from "./Fov";
@@ -87,10 +83,7 @@ export class Game {
     this.onQuitGame = handler;
   }
 
-  /**
-   * 新しい階層を開始する。
-   * マップや敵などの階層単位の状態を入れ替え、視界とログを初期化する。
-   */
+  /** 新しい階層を開始し、マップ・エンティティ・視界・ログを初期化する。 */
   start(map: GameMap, player: Player, enemies: Enemy[], items: Item[], floor = 1): void {
     this.map = map;
     this.player = player;
@@ -147,10 +140,7 @@ export class Game {
     return [this.player, ...this.items, ...this.enemies];
   }
 
-  /**
-   * 移動可能判定。
-   * 壁や他の移動ブロックエンティティがある場所には入れない。
-   */
+  /** 壁またはブロッキングエンティティがあれば移動せず false を返す。 */
   tryMoveActor(actor: Actor, dx: number, dy: number): boolean {
     const targetX = actor.x + dx;
     const targetY = actor.y + dy;
@@ -168,10 +158,7 @@ export class Game {
     return true;
   }
 
-  /**
-   * 戦闘処理。
-   * 攻撃力ぶんHPを減らし、HPが0になった敵はマップから取り除く。
-   */
+  /** 攻撃力分のダメージを与え、倒した場合は経験値を加算して敵リストから除く。 */
   attack(attacker: Actor, defender: Actor): void {
     const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
     defender.damage(attackPower);
@@ -223,7 +210,7 @@ export class Game {
   refresh(): void {
     this.fov.compute(this.map, this.player.x, this.player.y);
     this.renderer.render(this.map, this.entities, this.fov, this.isGameOver);
-    this.renderUi();
+    this.renderUI();
     this.renderMapOverlay();
   }
 
@@ -270,7 +257,7 @@ export class Game {
   }
 
   /** HPや階層、ログなどのHTML UIを更新する。 */
-  private renderUi(): void {
+  private renderUI(): void {
     this.statusElement.innerHTML = [
       this.statusRow("LV", `${this.player.level}`),
       this.statusRow("EXP", `${this.player.exp}/${this.player.nextLevelExp}`),

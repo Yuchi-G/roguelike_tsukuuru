@@ -1,7 +1,3 @@
-/**
- * Canvasへマップとエンティティを描画するファイル。
- * ゲーム状態の判断はせず、渡された情報を画面に表示する役割に絞る。
- */
 import type { Entity } from "./Entity";
 import type { Fov } from "./Fov";
 import type { RenderConfig } from "./GameConfig";

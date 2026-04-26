@@ -1,7 +1,3 @@
-/**
- * ランダムダンジョンを生成するファイル。
- * 部屋を作り、部屋同士を通路でつなぎ、最後の部屋に階段を置く。
- */
 import { GameMap } from "./Map";
 import { defaultTileDefinitions, Tile, type TileDefinition, type TileType } from "./Tile";
 
@@ -76,6 +72,8 @@ export class DungeonGenerator {
       map.setTile(stairsX, stairsY, Tile.fromDefinition(this.tiles.stairs));
     }
 
+    this.scatterCustomTiles(map);
+
     return { map, rooms };
   }
 
@@ -127,6 +125,31 @@ export class DungeonGenerator {
       a.y <= b.y + b.height &&
       a.y + a.height >= b.y
     );
+  }
+
+  /**
+   * コアタイル（wall/floor/stairs）以外のタイルを、scatterRate に従って床タイルに散布する。
+   * ダンジョン生成後のポストプロセスとして呼ぶ。
+   */
+  private scatterCustomTiles(map: GameMap): void {
+    const coreTileTypes = new Set(["wall", "floor", "stairs"]);
+    const customTiles = Object.values(this.tiles).filter(
+      (tile) => !coreTileTypes.has(tile.type) && (tile.scatterRate ?? 0) > 0,
+    );
+
+    if (customTiles.length === 0) return;
+
+    for (let y = 0; y < this.height; y += 1) {
+      for (let x = 0; x < this.width; x += 1) {
+        if (map.getTile(x, y).type !== "floor") continue;
+        for (const tileDef of customTiles) {
+          if (Math.random() < (tileDef.scatterRate ?? 0)) {
+            map.setTile(x, y, Tile.fromDefinition(tileDef));
+            break;
+          }
+        }
+      }
+    }
   }
 
   private randomInt(min: number, max: number): number {

@@ -25,10 +25,14 @@ export const sampleGameConfig: GameConfig = {
     { id: "weak", char: "s", color: "#7cc7d8", name: "スライム", maxHp: 8, attackPower: 2, expValue: 4, aiId: "chase" },
     { id: "normal", char: "g", color: "#9bd37d", name: "ゴブリン", maxHp: 10, attackPower: 3, expValue: 5, aiId: "chase" },
     { id: "strong", char: "O", color: "#d88964", name: "オーク", maxHp: 16, attackPower: 5, expValue: 9, aiId: "chase" },
+    // flee AIのサンプル: HPが半分以下になると逃げ出す。main.tsでAIを登録している。
+    { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, attackPower: 2, expValue: 3, aiId: "flee" },
   ],
   items: [
     { id: "potion", name: "回復薬", char: "!", color: "#ff6fae", effects: [{ effectId: "heal", params: { amount: 8 } }] },
     { id: "sword", name: "剣", char: ")", color: "#f0d978", effects: [{ effectId: "equipWeapon", params: { atk: 3 } }] },
+    // fullHeal効果のサンプル: HP全回復。main.tsで効果を登録している。
+    { id: "elixir", name: "エリクサー", char: "~", color: "#a0e0ff", effects: [{ effectId: "fullHeal", params: {} }] },
   ],
   floorRules: {
     maxEnemies: 12,
@@ -42,10 +46,12 @@ export const sampleGameConfig: GameConfig = {
           { enemyId: "weak", weight: 4 },
           { enemyId: "normal", weight: 3 },
           { enemyId: "strong", weight: 1 },
+          { enemyId: "bat", weight: 2 },
         ],
         itemDrops: [
           { itemId: "potion", chance: 0.55 },
           { itemId: "sword", chance: 0.25 },
+          { itemId: "elixir", chance: 0.10 },
         ],
         enemyHpBonusPerFloor: 0.8,
         enemyAttackBonusPerFloor: 0.2,
@@ -72,6 +78,9 @@ export const sampleGameConfig: GameConfig = {
     hpGainPerLevel: 5,
     attackGainPerLevel: 2,
   },
+  // ConfigPanelのAI/効果選択肢に追加するカスタムID。実装はmain.tsで登録する。
+  customAiIds: ["flee"],
+  customEffectIds: ["fullHeal"],
   messages: {
     floorArrive: (floor) => `${floor}階に到着した。`,
     attack: (attacker, defender, damage) => `${attacker.name}が${defender.name}に${damage}ダメージ。`,

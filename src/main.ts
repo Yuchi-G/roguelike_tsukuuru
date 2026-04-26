@@ -32,7 +32,6 @@ const startScreen = startScreenElement;
 const appRoot = appElement;
 const gameShell = gameShellElement;
 
-// Gameはエンジン本体、MainSceneはサンプルゲームの初期化を担当する。
 const game = new Game(canvas, mapOverlayElement, statusElement, logElement, sampleGameConfig);
 const scene = new MainScene(game, sampleGameConfig);
 
@@ -119,7 +118,6 @@ function quitGameToSetup(): void {
   configPanel.refresh();
 }
 
-// 入力イベントから、再開始と階段移動のゲーム処理へつなぐ。
 game.setRestartHandler(() => scene.load());
 game.setActionHandler(() => scene.goToNextFloor());
 game.setOpenConfigHandler(openConfigFromGame);

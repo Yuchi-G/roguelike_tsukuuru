@@ -4,13 +4,13 @@
  */
 import type { Game } from "./Game";
 
-/** 敵ターンを実行するためのクsssssラス。 */
+/** 敵ターンを実行するためのクラス。 */
 export class TurnManager {
   /** ゲームオーバーになっていなければ、残っている敵を順番に動かす。 */
   runEnemyTurn(game: Game): void {
     for (const enemy of [...game.enemies]) {
       if (!game.isGameOver) {
-        enemy.update(game) ;
+        enemy.update(game);
       }
     }
   }

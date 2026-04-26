@@ -4,7 +4,7 @@
  */
 import { DungeonGenerator } from "../engine/DungeonGenerator";
 import type { Game } from "../engine/Game";
-import { Enemy } from "./Enemy";
+import { Enemy, enemyTypes } from "./Enemy";
 import { Item } from "./Item";
 import { Player } from "./Player";
 
@@ -50,7 +50,7 @@ export class MainScene {
       const enemyCount = Math.random() < 0.7 ? 1 : 2;
       for (let j = 0; j < enemyCount; j += 1) {
         const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
-        enemies.push(new Enemy(x, y, this.floor));
+        enemies.push(new Enemy(x, y, this.randomEnemyType(), this.floor));
         occupied.add(this.key(x, y));
       }
 
@@ -88,5 +88,9 @@ export class MainScene {
 
   private key(x: number, y: number): string {
     return `${x},${y}`;
+  }
+
+  private randomEnemyType(): Enemy["type"] {
+    return enemyTypes[Math.floor(Math.random() * enemyTypes.length)].type;
   }
 }

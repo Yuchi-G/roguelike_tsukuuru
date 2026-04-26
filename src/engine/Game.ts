@@ -1,3 +1,7 @@
+/**
+ * ゲーム全体の進行を管理する中心ファイル。
+ * マップ、エンティティ、入力、ターン、描画、UI更新をここでつなぐ。
+ */
 import { Collision } from "./Collision";
 import type { Actor, Entity } from "./Entity";
 import { Fov } from "./Fov";
@@ -10,6 +14,10 @@ import type { Enemy } from "../game/Enemy";
 import type { Item } from "../game/Item";
 import type { Player } from "../game/Player";
 
+/**
+ * ローグライクの1プレイ中の状態を持つクラス。
+ * ここでは「プレイヤーが行動する → 敵が行動する → 画面を更新する」という流れを管理する。
+ */
 export class Game {
   public map!: GameMap;
   public player!: Player;
@@ -33,6 +41,7 @@ export class Game {
     this.input.setMoveHandler((direction) => this.handlePlayerMove(direction));
   }
 
+  /** ゲームオーバー中だけEnterで新しいゲームを開始する。 */
   setRestartHandler(handler: () => void): void {
     this.input.setRestartHandler(() => {
       if (this.isGameOver) {
@@ -41,6 +50,7 @@ export class Game {
     });
   }
 
+  /** 通常プレイ中の決定アクション。現在は階段を使うために利用する。 */
   setActionHandler(handler: () => void): void {
     this.input.setActionHandler(() => {
       if (!this.isGameOver) {
@@ -49,6 +59,10 @@ export class Game {
     });
   }
 
+  /**
+   * 新しい階層を開始する。
+   * マップや敵などの階層単位の状態を入れ替え、視界とログを初期化する。
+   */
   start(map: GameMap, player: Player, enemies: Enemy[], items: Item[], floor = 1): void {
     this.map = map;
     this.player = player;
@@ -64,14 +78,20 @@ export class Game {
     this.refresh();
   }
 
+  /** 階段移動の判定。プレイヤーが階段タイルの上にいる時だけ次の階へ進める。 */
   isPlayerOnStairs(): boolean {
     return this.map.getTile(this.player.x, this.player.y).type === "stairs";
   }
 
+  /** 描画や衝突判定で使う、現在存在する全エンティティの一覧。 */
   get entities(): Entity[] {
     return [this.player, ...this.items, ...this.enemies];
   }
 
+  /**
+   * 移動可能判定。
+   * 壁や他の移動ブロックエンティティがある場所には入れない。
+   */
   tryMoveActor(actor: Actor, dx: number, dy: number): boolean {
     const targetX = actor.x + dx;
     const targetY = actor.y + dy;
@@ -89,6 +109,10 @@ export class Game {
     return true;
   }
 
+  /**
+   * 戦闘処理。
+   * 攻撃力ぶんHPを減らし、HPが0になった敵はマップから取り除く。
+   */
   attack(attacker: Actor, defender: Actor): void {
     defender.damage(attacker.attackPower);
     this.logger.add(`${attacker.name}が${defender.name}に${attacker.attackPower}ダメージ。`);
@@ -103,6 +127,7 @@ export class Game {
     }
   }
 
+  /** プレイヤーが足元のアイテムを拾う処理。 */
   pickupItems(): void {
     const item = this.items.find((candidate) => candidate.x === this.player.x && candidate.y === this.player.y);
     if (!item) return;
@@ -111,12 +136,14 @@ export class Game {
     this.items = this.items.filter((candidate) => candidate.id !== item.id);
   }
 
+  /** ゲーム状態を画面とUIへ反映する。 */
   refresh(): void {
     this.fov.compute(this.map, this.player.x, this.player.y);
     this.renderer.render(this.map, this.entities, this.fov, this.isGameOver);
     this.renderUi();
   }
 
+  /** プレイヤー死亡時のゲームオーバー処理。 */
   endGame(): void {
     this.isGameOver = true;
     this.input.setEnabled(false);
@@ -124,6 +151,10 @@ export class Game {
     this.logger.add("Enterキーで新しいゲームを開始。");
   }
 
+  /**
+   * プレイヤーの移動入力を処理する。
+   * 敵がいれば攻撃、空きマスなら移動し、その後に敵ターンを実行する。
+   */
   private handlePlayerMove(direction: Direction): void {
     if (this.isGameOver) return;
 
@@ -148,6 +179,7 @@ export class Game {
     this.refresh();
   }
 
+  /** HPや階層、ログなどのHTML UIを更新する。 */
   private renderUi(): void {
     this.statusElement.innerHTML = [
       this.statusRow("HP", `${this.player.hp}/${this.player.maxHp}`),

@@ -5,6 +5,7 @@
 // イベント委譲で操作を受け付ける。プロジェクトの保存/読込/初期化も担当する。
 // ---------------------------------------------------------------------------
 
+import { escapeHtml } from "./escapeHtml";
 import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "./GameConfig";
 import type { ProjectInfo, ProjectStorage } from "./ProjectStorage";
 import type { ScriptDefinition } from "./Script";
@@ -94,7 +95,7 @@ export class ConfigPanel {
       this.renderTileSection(),
       this.renderMessageSection(),
       this.renderProjectSection(),
-      `<button class="config-apply" type="submit">${this.escape(this.submitLabel())}</button>`,
+      `<button class="config-apply" type="submit">${escapeHtml(this.submitLabel())}</button>`,
       "</form>",
     ].join("");
     this.mountScriptEditors();
@@ -177,7 +178,7 @@ export class ConfigPanel {
     const prefix = `enemy.${enemy.id}`;
     return [
       '<div class="config-group">',
-      `<strong>${this.escape(enemy.name)}</strong>`,
+      `<strong>${escapeHtml(enemy.name)}</strong>`,
       this.checkboxInput("削除", `${prefix}.delete`, false),
       this.textInput("名前", `${prefix}.name`, enemy.name),
       this.textInput("見た目", `${prefix}.char`, enemy.char, 1),
@@ -186,7 +187,7 @@ export class ConfigPanel {
       this.numberInput("攻撃", `${prefix}.attackPower`, enemy.attackPower, 0),
       this.numberInput("EXP", `${prefix}.expValue`, enemy.expValue, 0),
       this.selectInput("AI", `${prefix}.aiId`, enemy.aiId, this.aiOptions),
-      `<div class="script-editor-mount" data-script-target="enemy-ai" data-enemy-id="${this.escape(enemy.id)}"></div>`,
+      `<div class="script-editor-mount" data-script-target="enemy-ai" data-enemy-id="${escapeHtml(enemy.id)}"></div>`,
       ...this.config.floorRules.floors.map((rule) => {
         const entry = rule.enemyTable.find((e) => e.enemyId === enemy.id);
         return this.numberInput(
@@ -224,7 +225,7 @@ export class ConfigPanel {
     const value = this.effectValue(effect.effectId, effect.params);
     return [
       '<div class="config-group">',
-      `<strong>${this.escape(item.name)}</strong>`,
+      `<strong>${escapeHtml(item.name)}</strong>`,
       this.checkboxInput("削除", `${prefix}.delete`, false),
       this.textInput("名前", `${prefix}.name`, item.name),
       this.textInput("見た目", `${prefix}.char`, item.char, 1),
@@ -249,7 +250,7 @@ export class ConfigPanel {
     const prefix = `floor.${rule.id}`;
     return [
       '<div class="config-group">',
-      `<strong>${this.escape(rule.id)}</strong>`,
+      `<strong>${escapeHtml(rule.id)}</strong>`,
       this.numberInput("開始階", `${prefix}.fromFloor`, rule.fromFloor, 1),
       this.numberInput("終了階", `${prefix}.toFloor`, rule.toFloor ?? 0, 0),
       this.numberInput("敵数min", `${prefix}.enemyMin`, rule.enemyCount.min, 0),
@@ -270,7 +271,7 @@ export class ConfigPanel {
       '<fieldset><legend>タイル</legend>',
       ...Object.entries(this.config.tiles).map(([type, tile]) => [
         '<div class="config-group">',
-        `<strong>${this.escape(type)}</strong>`,
+        `<strong>${escapeHtml(type)}</strong>`,
         this.textInput("見た目", `tile.${type}.char`, tile.char, 1),
         this.colorInput("文字色", `tile.${type}.color`, tile.color),
         this.colorInput("背景色", `tile.${type}.background`, tile.background),
@@ -310,10 +311,10 @@ export class ConfigPanel {
     const savedLabel = this.projectInfo.isDirty ? "未保存の変更あり" : "保存済み";
     return [
       '<fieldset><legend>プロジェクト</legend>',
-      `<div class="project-status">${this.escape(this.projectStatus)}</div>`,
-      `<div class="project-info"><span>名前</span><strong>${this.escape(projectName)}</strong></div>`,
-      `<div class="project-info"><span>パス</span><strong>${this.escape(filePath)}</strong></div>`,
-      `<div class="project-info"><span>状態</span><strong>${this.escape(savedLabel)}</strong></div>`,
+      `<div class="project-status">${escapeHtml(this.projectStatus)}</div>`,
+      `<div class="project-info"><span>名前</span><strong>${escapeHtml(projectName)}</strong></div>`,
+      `<div class="project-info"><span>パス</span><strong>${escapeHtml(filePath)}</strong></div>`,
+      `<div class="project-info"><span>状態</span><strong>${escapeHtml(savedLabel)}</strong></div>`,
       `<div class="project-actions">`,
       '<button class="config-secondary" type="button" data-action="new-project">新規</button>',
       '<button class="config-secondary" type="button" data-action="open-project">開く</button>',
@@ -322,8 +323,8 @@ export class ConfigPanel {
       '<button class="config-secondary" type="button" data-action="reset-default-config">初期化</button>',
       "</div>",
       '<div class="project-help">新規: 初期設定の新しいプロジェクト / 開く: JSONファイル読込 / 保存: 現在のファイルへ保存 / 名前を付けて保存: 保存先を選択 / 初期化: 現在の設定だけ初期化</div>',
-      `<input type="hidden" name="project.original" value="${this.escape(project)}" />`,
-      `<label><span>JSON preview</span><textarea name="project.json" rows="8">${this.escape(project)}</textarea></label>`,
+      `<input type="hidden" name="project.original" value="${escapeHtml(project)}" />`,
+      `<label><span>JSON preview</span><textarea name="project.json" rows="8">${escapeHtml(project)}</textarea></label>`,
       "</fieldset>",
     ].join("");
   }
@@ -644,27 +645,27 @@ export class ConfigPanel {
 
   private numberInput(label: string, name: string, value: number, min: number, max?: number): string {
     const maxAttribute = max === undefined ? "" : ` max="${max}"`;
-    return `<label><span>${this.escape(label)}</span><input type="number" name="${this.escape(name)}" value="${value}" min="${min}" step="any"${maxAttribute} /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="number" name="${escapeHtml(name)}" value="${value}" min="${min}" step="any"${maxAttribute} /></label>`;
   }
 
   private textInput(label: string, name: string, value: string, maxLength?: number): string {
     const maxLengthAttribute = maxLength === undefined ? "" : ` maxlength="${maxLength}"`;
-    return `<label><span>${this.escape(label)}</span><input type="text" name="${this.escape(name)}" value="${this.escape(value)}"${maxLengthAttribute} /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="text" name="${escapeHtml(name)}" value="${escapeHtml(value)}"${maxLengthAttribute} /></label>`;
   }
 
   private colorInput(label: string, name: string, value: string): string {
-    return `<label><span>${this.escape(label)}</span><input type="color" name="${this.escape(name)}" value="${this.escape(value)}" /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="color" name="${escapeHtml(name)}" value="${escapeHtml(value)}" /></label>`;
   }
 
   private checkboxInput(label: string, name: string, checked: boolean): string {
-    return `<label><span>${this.escape(label)}</span><input type="checkbox" name="${this.escape(name)}"${checked ? " checked" : ""} /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="checkbox" name="${escapeHtml(name)}"${checked ? " checked" : ""} /></label>`;
   }
 
   private selectInput(label: string, name: string, value: string, options: string[]): string {
     const optionHtml = options
-      .map((option) => `<option value="${this.escape(option)}"${option === value ? " selected" : ""}>${this.escape(option)}</option>`)
+      .map((option) => `<option value="${escapeHtml(option)}"${option === value ? " selected" : ""}>${escapeHtml(option)}</option>`)
       .join("");
-    return `<label><span>${this.escape(label)}</span><select name="${this.escape(name)}">${optionHtml}</select></label>`;
+    return `<label><span>${escapeHtml(label)}</span><select name="${escapeHtml(name)}">${optionHtml}</select></label>`;
   }
 
   private numberValue(formData: FormData, name: string, fallback: number): number {
@@ -891,11 +892,4 @@ export class ConfigPanel {
     };
   }
 
-  private escape(value: string): string {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
 }

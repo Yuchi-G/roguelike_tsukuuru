@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// メインシーン
+//
+// 1階層分のダンジョン生成と、次の階への移動を管理する。
+// 階層ルールに従って敵・アイテムを配置し、Game.start() で開始する。
+// ---------------------------------------------------------------------------
+
 import { DungeonGenerator } from "../engine/DungeonGenerator";
 import { EntityFactory } from "../engine/EntityFactory";
 import type { Game } from "../engine/Game";
@@ -115,6 +122,7 @@ export class MainScene {
     return `${x},${y}`;
   }
 
+  /** 指定階に該当する階層ルールを検索する。 */
   private ruleForFloor(floor: number): FloorRangeRule {
     const rule = this.config.floorRules.floors.find((candidate) => (
       floor >= candidate.fromFloor && (candidate.toFloor === undefined || floor <= candidate.toFloor)
@@ -126,6 +134,7 @@ export class MainScene {
     return rule;
   }
 
+  /** 出現重みに従って敵の種類を抽選する。 */
   private randomEnemyDefinition(rule: FloorRangeRule): EnemyDefinition {
     const totalWeight = rule.enemyTable.reduce((sum, entry) => sum + Math.max(0, entry.weight), 0);
     if (totalWeight <= 0) {

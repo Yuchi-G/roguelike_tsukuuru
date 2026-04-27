@@ -1,5 +1,91 @@
+// ---------------------------------------------------------------------------
+// サンプルゲーム設定
+//
+// デフォルトの敵・アイテム・階層ルール・描画設定を定義する。
+// ConfigPanel で編集可能な初期値の一式。
+// ---------------------------------------------------------------------------
+
 import type { GameConfig } from "../engine/GameConfig";
+import type { ScriptDefinition } from "../engine/Script";
 import { defaultTileDefinitions } from "../engine/Tile";
+
+// ========================== 組み込みAIスクリプト ==========================
+
+/** 追跡AI: 隣接なら攻撃、そうでなければプレイヤーに近づく。 */
+export const chaseAiScript: ScriptDefinition = {
+  id: "chase",
+  name: "追跡",
+  trigger: "ai",
+  variables: [],
+  body: [
+    {
+      type: "if",
+      condition: { type: "inRange", target: "player", from: "self", distance: { type: "literal", value: 1 } },
+      then: [
+        { type: "action", action: { type: "attack", attacker: "self", defender: "player" } },
+      ],
+      else: [
+        { type: "action", action: { type: "move", actor: "self", mode: { type: "toward", target: "player" } } },
+      ],
+    },
+  ],
+};
+
+/** 待機AI: 何もしない。 */
+export const stationaryAiScript: ScriptDefinition = {
+  id: "stationary",
+  name: "待機",
+  trigger: "ai",
+  variables: [],
+  body: [
+    { type: "action", action: { type: "doNothing" } },
+  ],
+};
+
+/** ランダムAI: ランダム方向に移動する。 */
+export const randomAiScript: ScriptDefinition = {
+  id: "random",
+  name: "ランダム",
+  trigger: "ai",
+  variables: [],
+  body: [
+    { type: "action", action: { type: "move", actor: "self", mode: { type: "random" } } },
+  ],
+};
+
+/** 逃走AI: HP50%以下ならプレイヤーから逃げる。通常時はchaseと同じ。 */
+export const fleeAiScript: ScriptDefinition = {
+  id: "flee",
+  name: "逃走",
+  trigger: "ai",
+  variables: [],
+  body: [
+    {
+      type: "if",
+      condition: {
+        type: "compare",
+        left: { type: "stat", target: "self", stat: "hpPercent" },
+        op: "<=",
+        right: { type: "literal", value: 50 },
+      },
+      then: [
+        { type: "action", action: { type: "move", actor: "self", mode: { type: "away", target: "player" } } },
+      ],
+      else: [
+        {
+          type: "if",
+          condition: { type: "inRange", target: "player", from: "self", distance: { type: "literal", value: 1 } },
+          then: [
+            { type: "action", action: { type: "attack", attacker: "self", defender: "player" } },
+          ],
+          else: [
+            { type: "action", action: { type: "move", actor: "self", mode: { type: "toward", target: "player" } } },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
 export const sampleGameConfig: GameConfig = {
   player: {
@@ -22,11 +108,10 @@ export const sampleGameConfig: GameConfig = {
   },
   tiles: defaultTileDefinitions,
   enemies: [
-    { id: "weak", char: "s", color: "#7cc7d8", name: "スライム", maxHp: 8, attackPower: 2, expValue: 4, aiId: "chase" },
-    { id: "normal", char: "g", color: "#9bd37d", name: "ゴブリン", maxHp: 10, attackPower: 3, expValue: 5, aiId: "chase" },
-    { id: "strong", char: "O", color: "#d88964", name: "オーク", maxHp: 16, attackPower: 5, expValue: 9, aiId: "chase" },
-    // flee AIのサンプル: HPが半分以下になると逃げ出す。main.tsでAIを登録している。
-    { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, attackPower: 2, expValue: 3, aiId: "flee" },
+    { id: "weak", char: "s", color: "#7cc7d8", name: "スライム", maxHp: 8, attackPower: 2, expValue: 4, aiId: "chase", aiScript: chaseAiScript },
+    { id: "normal", char: "g", color: "#9bd37d", name: "ゴブリン", maxHp: 10, attackPower: 3, expValue: 5, aiId: "chase", aiScript: chaseAiScript },
+    { id: "strong", char: "O", color: "#d88964", name: "オーク", maxHp: 16, attackPower: 5, expValue: 9, aiId: "chase", aiScript: chaseAiScript },
+    { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, attackPower: 2, expValue: 3, aiId: "flee", aiScript: fleeAiScript },
   ],
   items: [
     { id: "potion", name: "回復薬", char: "!", color: "#ff6fae", effects: [{ effectId: "heal", params: { amount: 8 } }] },

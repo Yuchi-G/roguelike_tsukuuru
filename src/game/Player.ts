@@ -1,5 +1,6 @@
 import { Actor } from "../engine/Entity";
 import type { EffectParams, PlayerInitialStats } from "../engine/GameConfig";
+import type { ScriptDefinition } from "../engine/Script";
 
 export type Equipment = {
   name: string;
@@ -11,6 +12,8 @@ export type BagItem = {
   effectId: string;
   params: EffectParams;
   description: string;
+  /** 使用時にスクリプトで効果を実行する場合に設定する。 */
+  useScript?: ScriptDefinition;
 };
 
 /** プレイヤーキャラクター。入力による移動や攻撃はGame側で処理する。 */

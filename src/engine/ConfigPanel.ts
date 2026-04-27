@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// 設定パネル（ConfigPanel）
+//
+// ゲーム設定の編集UI。HTML文字列ベースでフォームを描画し、
+// イベント委譲で操作を受け付ける。プロジェクトの保存/読込/初期化も担当する。
+// ---------------------------------------------------------------------------
+
 import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "./GameConfig";
 import type { ProjectInfo, ProjectStorage } from "./ProjectStorage";
 import type { ScriptDefinition } from "./Script";
@@ -5,6 +12,7 @@ import { ScriptEditor } from "./ScriptEditor";
 
 type MessageKey = keyof GameConfig["messages"];
 
+/** ログ文言のテンプレート。{変数名} 形式のプレースホルダを実行時に置換する。 */
 const messageTemplates: Record<MessageKey, string> = {
   floorArrive: "{floor}階に到着した。",
   attack: "{attacker}が{defender}に{damage}ダメージ。",
@@ -28,8 +36,13 @@ const messageTemplates: Record<MessageKey, string> = {
 
 const defaultAiOptions = ["chase", "stationary", "random"];
 const defaultEffectOptions = ["heal", "equipWeapon"];
+/** JSONスキーマのバージョン。読込時にマイグレーションの要否を判定する。 */
 const projectSchemaVersion = 2;
 
+/**
+ * ゲーム設定の編集UIコンポーネント。
+ * フォーム送信で GameConfig を更新し、プロジェクトの保存/読込も管理する。
+ */
 export class ConfigPanel {
   private readonly defaultProjectJson: string;
   private projectStatus = "";
@@ -67,6 +80,7 @@ export class ConfigPanel {
     return [...defaultEffectOptions, ...custom.filter((id) => !defaultEffectOptions.includes(id))];
   }
 
+  /** 全セクションのHTMLを組み立てて root に書き込む。 */
   private render(): void {
     this.root.innerHTML = [
       '<form class="config-form">',
@@ -359,6 +373,7 @@ export class ConfigPanel {
     void this.markDirty();
   }
 
+  /** フォーム送信時にフォーム値またはJSON previewから設定を反映する。 */
   private handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
     const form = event.target;
@@ -381,6 +396,7 @@ export class ConfigPanel {
     this.render();
   }
 
+  /** フォームの全セクションの値を GameConfig へ反映する。 */
   private applyFormConfig(formData: FormData): void {
     this.applyPlayer(formData);
     this.applyDungeon(formData);
@@ -534,6 +550,7 @@ export class ConfigPanel {
     }
   }
 
+  /** 新規追加した敵を全階層ルールへ初期登録する。 */
   private addEnemyToFloorRules(enemyId: string, weight: number): void {
     if (weight <= 0) return;
 
@@ -544,6 +561,7 @@ export class ConfigPanel {
     }
   }
 
+  /** 新規追加したアイテムを全階層ルールへ初期登録する。 */
   private addItemToFloorRules(itemId: string, chance: number): void {
     if (chance <= 0) return;
 
@@ -586,6 +604,7 @@ export class ConfigPanel {
     this.applyMessageTemplates();
   }
 
+  /** テンプレート文字列から config.messages の関数群を生成する。 */
   private applyMessageTemplates(): void {
     this.config.messages.floorArrive = (floor) => this.interpolate(messageTemplates.floorArrive, { floor });
     this.config.messages.attack = (attacker, defender, damage) => this.interpolate(messageTemplates.attack, { attacker: attacker.name, defender: defender.name, damage });
@@ -734,6 +753,7 @@ export class ConfigPanel {
     this.render();
   }
 
+  /** JSONを解析して GameConfig へ反映する。不正な形式なら false を返す。 */
   private importProject(json: string): boolean {
     try {
       const parsed = JSON.parse(json) as Partial<GameConfig> & {
@@ -763,6 +783,7 @@ export class ConfigPanel {
     }
   }
 
+  /** 現在の設定を保存用 JSON 文字列に変換する。 */
   private projectJson(): string {
     return JSON.stringify({
       schemaVersion: projectSchemaVersion,
@@ -826,6 +847,7 @@ export class ConfigPanel {
     return filePath.split(/[\\/]/).pop() ?? filePath;
   }
 
+  /** 旧バージョンの JSON を読み込んだ時に、全敵・アイテムを階層ルールへ補完する。 */
   private migrateFloorRuleCoverage(): void {
     for (const enemy of this.config.enemies) {
       this.addEnemyToFloorRules(enemy.id, 1);
@@ -836,6 +858,7 @@ export class ConfigPanel {
     }
   }
 
+  /** 敵設定のマウントポイントにスクリプトエディタを生成して挿入する。 */
   private mountScriptEditors(): void {
     this.scriptEditors = [];
     const mounts = this.root.querySelectorAll<HTMLElement>(".script-editor-mount");

@@ -1,8 +1,15 @@
+// ---------------------------------------------------------------------------
+// 敵エンティティ
+//
+// EnemyDefinition からステータスを受け取り、毎ターン AI で行動する。
+// aiScript があればスクリプトエンジンで実行、なければ AiRegistry にフォールバック。
+// ---------------------------------------------------------------------------
+
 import type { Game } from "../engine/Game";
 import { Actor } from "../engine/Entity";
 import type { EnemyDefinition } from "../engine/GameConfig";
 
-/** プレイヤーを追跡する基本的な敵キャラクター。 */
+/** 敵キャラクター。毎ターン update() で AI が呼ばれる。 */
 export class Enemy extends Actor {
   public expValue: number;
 
@@ -23,6 +30,7 @@ export class Enemy extends Actor {
     return this.definition.id;
   }
 
+  /** AI 行動。スクリプト優先、なければレジストリにフォールバック。 */
   override update(game: Game): void {
     const script = this.definition.aiScript;
     if (script) {

@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// サンプルゲーム設定
+//
+// デフォルトの敵・アイテム・階層ルール・描画設定を定義する。
+// ConfigPanel で編集可能な初期値の一式。
+// ---------------------------------------------------------------------------
+
 import type { GameConfig } from "../engine/GameConfig";
 import type { ScriptDefinition } from "../engine/Script";
 import { defaultTileDefinitions } from "../engine/Tile";

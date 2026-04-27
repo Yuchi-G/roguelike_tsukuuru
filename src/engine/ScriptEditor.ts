@@ -206,6 +206,10 @@ function defaultMoveMode(type: string): MoveMode {
 
 // ========================== ScriptEditor ==========================
 
+/**
+ * ScriptDefinition を GUI で編集するコンポーネント。
+ * パス指定でネストされたスクリプトツリーの任意の場所を操作する。
+ */
 export class ScriptEditor {
   private script: ScriptDefinition;
 
@@ -220,10 +224,12 @@ export class ScriptEditor {
     this.render();
   }
 
+  /** 編集中のスクリプト定義のコピーを返す。 */
   getScript(): ScriptDefinition {
     return this.script;
   }
 
+  /** 外部からスクリプトを差し替えて再描画する。 */
   setScript(script: ScriptDefinition): void {
     this.script = structuredClone(script);
     this.render();
@@ -268,6 +274,7 @@ export class ScriptEditor {
 
   // ========================== イベントハンドリング ==========================
 
+  /** ボタンクリックで、ノード追加/削除/並び替えなどを処理する。 */
   private handleClick(event: MouseEvent): void {
     const btn = (event.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
     if (!btn) return;
@@ -333,6 +340,7 @@ export class ScriptEditor {
     this.emitAndRender();
   }
 
+  /** select/input の変更で、ノード型の切り替えやプロパティ値の更新を処理する。 */
   private handleChange(event: Event): void {
     const el = event.target;
     if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return;
@@ -376,6 +384,7 @@ export class ScriptEditor {
     this.emitAndRender();
   }
 
+  /** 入力値を number / boolean / string に変換する。 */
   private parseInputValue(value: string, inputType: string): ScriptValue {
     if (inputType === "number") {
       const num = parseFloat(value);
@@ -389,6 +398,7 @@ export class ScriptEditor {
     return value;
   }
 
+  /** 変更を通知してから再描画する。 */
   private emitAndRender(): void {
     this.onChange?.();
     this.render();

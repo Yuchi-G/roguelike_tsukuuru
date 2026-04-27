@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// マップ上のアイテムエンティティ
+//
+// プレイヤーが踏んだ時に onPickup が呼ばれ、効果が発動する。
+// effectScript があればスクリプトエンジンで実行、なければ ItemEffectRegistry。
+// ---------------------------------------------------------------------------
+
 import { Entity } from "../engine/Entity";
 import type { Game } from "../engine/Game";
 import type { ItemDefinition } from "../engine/GameConfig";
@@ -13,7 +20,7 @@ export class Item extends Entity {
     return this.definition.name;
   }
 
-  /** プレイヤーが上に乗った時の取得処理。 */
+  /** プレイヤーが上に乗った時の取得処理。スクリプト優先、なければレジストリ。 */
   onPickup(player: Player, game: Game): void {
     const script = this.definition.effectScript;
     if (script) {

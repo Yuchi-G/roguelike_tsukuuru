@@ -104,6 +104,7 @@ export class Game {
     this.refresh();
   }
 
+  /** ゲームを未開始状態に戻す。設定画面に戻る時に使う。 */
   resetToUnstarted(): void {
     this.enemies = [];
     this.items = [];
@@ -118,10 +119,12 @@ export class Game {
     this.mapOverlayElement.innerHTML = "";
   }
 
+  /** プレイ中に設定画面を開く際、入力を一時停止する。 */
   pauseForConfig(): void {
     this.input.setEnabled(false);
   }
 
+  /** 設定変更後にゲームを再開し、変更を反映する。 */
   resumeAfterConfigChange(): void {
     this.input.setEnabled(!this.isGameOver);
     this.fov = new Fov(this.config.fov.radius);
@@ -287,6 +290,7 @@ export class Game {
     return `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`;
   }
 
+  /** 設定変更後に、現在のマップのタイル見た目を新しい設定で上書きする。 */
   private applyTileConfigToCurrentMap(): void {
     for (let i = 0; i < this.map.tiles.length; i += 1) {
       const type = this.map.tiles[i].type;
@@ -294,6 +298,7 @@ export class Game {
     }
   }
 
+  /** 設定変更後に、プレイヤーのステータスを新しい設定基準で再計算する。 */
   private applyPlayerConfigToCurrentPlayer(): void {
     const gainedLevels = Math.max(0, this.player.level - this.config.player.level);
     const previousMaxHp = this.player.maxHp;
@@ -361,6 +366,7 @@ export class Game {
     this.mapOverlayElement.innerHTML = this.renderBagChoice();
   }
 
+  /** ステータスパネルとマップオーバーレイのボタンクリックを処理する。 */
   private handleStatusClick(event: MouseEvent): void {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -450,6 +456,7 @@ export class Game {
     this.refresh();
   }
 
+  /** バッグ満杯時に既存アイテムを捨てて新しいアイテムに入れ替える。 */
   private replaceBagItem(dropIndex: number): void {
     if (!this.pendingBagItem) return;
 
@@ -466,6 +473,7 @@ export class Game {
     this.finishPlayerAction();
   }
 
+  /** バッグ満杯時に拾ったアイテムを捨てる。 */
   private discardPendingBagItem(): void {
     if (!this.pendingBagItem) return;
 
@@ -475,6 +483,7 @@ export class Game {
     this.finishPlayerAction();
   }
 
+  /** プレイヤーの行動後に敵ターンを実行し、画面を更新する。 */
   private finishPlayerAction(): void {
     if (!this.isGameOver) {
       runEnemyTurn(this);

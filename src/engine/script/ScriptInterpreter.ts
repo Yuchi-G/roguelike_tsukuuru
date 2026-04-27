@@ -4,8 +4,8 @@
 // ScriptDefinition を受け取り、ゲーム状態を操作しながら逐次実行する。
 // ---------------------------------------------------------------------------
 
-import type { Actor } from "./Entity";
-import type { Game } from "./Game";
+import type { Actor } from "../core/Entity";
+import type { Game } from "../core/Game";
 import type {
   Action,
   ArithmeticOp,
@@ -591,7 +591,7 @@ export class ScriptInterpreter {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private asPlayer(actor: Actor, context: ScriptContext): import("../game/Player").Player | null {
+  private asPlayer(actor: Actor, context: ScriptContext): import("../../game/Player").Player | null {
     return actor.id === context.game.player.id ? context.game.player : null;
   }
 

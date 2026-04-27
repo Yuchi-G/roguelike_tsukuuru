@@ -5,9 +5,9 @@
 // ConfigPanel で編集可能な初期値の一式。
 // ---------------------------------------------------------------------------
 
-import type { GameConfig } from "../engine/GameConfig";
-import type { ScriptDefinition } from "../engine/Script";
-import { defaultTileDefinitions } from "../engine/Tile";
+import type { GameConfig } from "../engine/core/GameConfig";
+import type { ScriptDefinition } from "../engine/script/Script";
+import { defaultTileDefinitions } from "../engine/map/Tile";
 
 // ========================== 組み込みAIスクリプト ==========================
 

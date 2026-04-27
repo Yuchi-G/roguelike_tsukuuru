@@ -1,20 +1,20 @@
-import { getBlockingEntityAt } from "./Collision";
+import { getBlockingEntityAt } from "../map/Collision";
 import type { Actor, Entity } from "./Entity";
-import { escapeHtml } from "./escapeHtml";
-import { Fov } from "./Fov";
-import { InputManager, type Direction } from "./InputManager";
-import { createDefaultAiRegistry, type AiRegistry } from "./AiRegistry";
-import { createDefaultItemEffectRegistry, type ItemEffectRegistry } from "./ItemEffectRegistry";
-import { Logger } from "./Logger";
-import type { GameMap } from "./Map";
-import { Renderer } from "./Renderer";
-import { ScriptInterpreter, VariableStore } from "./ScriptInterpreter";
-import { Tile } from "./Tile";
+import { escapeHtml } from "../utils/escapeHtml";
+import { Fov } from "../map/Fov";
+import { InputManager, type Direction } from "../input/InputManager";
+import { createDefaultAiRegistry, type AiRegistry } from "../registry/AiRegistry";
+import { createDefaultItemEffectRegistry, type ItemEffectRegistry } from "../registry/ItemEffectRegistry";
+import { Logger } from "../utils/Logger";
+import type { GameMap } from "../map/Map";
+import { Renderer } from "../rendering/Renderer";
+import { ScriptInterpreter, VariableStore } from "../script/ScriptInterpreter";
+import { Tile } from "../map/Tile";
 import { runEnemyTurn } from "./TurnManager";
 import type { GameConfig } from "./GameConfig";
-import type { Enemy } from "../game/Enemy";
-import type { Item } from "../game/Item";
-import type { BagItem, Player } from "../game/Player";
+import type { Enemy } from "../../game/Enemy";
+import type { Item } from "../../game/Item";
+import type { BagItem, Player } from "../../game/Player";
 
 /**
  * ローグライクの1プレイ中の状態を持つクラス。

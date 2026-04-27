@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { Actor } from "../../src/engine/Entity";
-import type { Game } from "../../src/engine/Game";
-import type { Fov } from "../../src/engine/Fov";
-import type { ScriptDefinition, ScriptNode, Condition, Action, ValueRef } from "../../src/engine/Script";
-import { ScriptInterpreter, VariableStore } from "../../src/engine/ScriptInterpreter";
+import { Actor } from "../../../src/engine/core/Entity";
+import type { Game } from "../../../src/engine/core/Game";
+import type { Fov } from "../../../src/engine/map/Fov";
+import type { ScriptDefinition, ScriptNode, Condition, Action, ValueRef } from "../../../src/engine/script/Script";
+import { ScriptInterpreter, VariableStore } from "../../../src/engine/script/ScriptInterpreter";
 
 // ========================== テスト用ヘルパー ==========================
 

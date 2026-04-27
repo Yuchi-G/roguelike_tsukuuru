@@ -1,6 +1,6 @@
-import { Actor } from "../engine/Entity";
-import type { EffectParams, PlayerInitialStats } from "../engine/GameConfig";
-import type { ScriptDefinition } from "../engine/Script";
+import { Actor } from "../engine/core/Entity";
+import type { EffectParams, PlayerInitialStats } from "../engine/core/GameConfig";
+import type { ScriptDefinition } from "../engine/script/Script";
 
 export type Equipment = {
   name: string;

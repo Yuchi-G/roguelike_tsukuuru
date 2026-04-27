@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Player, type BagItem } from "../../src/game/Player";
-import type { PlayerInitialStats } from "../../src/engine/GameConfig";
+import type { PlayerInitialStats } from "../../src/engine/core/GameConfig";
 
 const BASE_STATS: PlayerInitialStats = {
   name: "Hero",

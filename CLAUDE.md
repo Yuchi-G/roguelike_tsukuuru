@@ -18,12 +18,17 @@ npm run desktop   # production build後にElectronを起動
 
 | パス | 役割 |
 |------|------|
-| `src/engine/` | 再利用するエンジン機能 |
+| `src/engine/core/` | Game, TurnManager, Entity, EntityFactory, GameConfig |
+| `src/engine/map/` | Map, Tile, DungeonGenerator, Fov, Collision |
+| `src/engine/input/` | InputManager |
+| `src/engine/rendering/` | Renderer |
+| `src/engine/script/` | Script型定義, ScriptInterpreter |
+| `src/engine/registry/` | AiRegistry, ItemEffectRegistry |
+| `src/engine/utils/` | Logger, escapeHtml |
+| `src/app/ui/` | ConfigPanel, ScriptEditor（設定UI） |
+| `src/app/storage/` | ProjectStorage, DesktopProjectStorage（プロジェクト保存） |
 | `src/game/` | サンプルゲーム固有の定義と初期化 |
 | `src/game/sampleGameConfig.ts` | デフォルトのゲーム設定 |
-| `src/engine/ConfigPanel.ts` | 設定UI、保存/読込/初期化 |
-| `src/engine/ProjectStorage.ts` | renderer側の保存API |
-| `src/engine/DesktopProjectStorage.ts` | Electron preload API経由の保存実装 |
 | `src/main.ts` | アプリ起動、設定画面とプレイ開始の接続 |
 | `electron/main.cjs` | Electron main process、ファイルダイアログ、ファイルI/O |
 | `electron/preload.cjs` | rendererへ安全なIPC APIを公開 |
@@ -31,9 +36,17 @@ npm run desktop   # production build後にElectronを起動
 ## 実装境界
 
 **エンジン側 (`src/engine/`) に置くもの:**
-- ターン進行 / 衝突判定 / 描画 / 入力
-- マップ管理 / FOV / ログ / 基本戦闘処理
-- AI / アイテム効果の Registry
+- `core/` — ゲームループ、ターン進行、エンティティ、設定型定義
+- `map/` — マップ、タイル、ダンジョン生成、FOV、衝突判定
+- `input/` — キーボード入力
+- `rendering/` — Canvas描画
+- `script/` — ビジュアルスクリプト型定義・インタープリタ
+- `registry/` — 敵AI・アイテム効果の拡張ポイント
+- `utils/` — ログ、HTMLエスケープなどの汎用ユーティリティ
+
+**アプリ側 (`src/app/`) に置くもの:**
+- `ui/` — 設定パネル（ConfigPanel）、スクリプトエディタ（ScriptEditor）
+- `storage/` — プロジェクト保存API（ProjectStorage）、Electron実装
 
 **サンプルゲーム側 (`src/game/`) に置くもの:**
 - 初期設定
@@ -56,15 +69,15 @@ npm run desktop   # production build後にElectronを起動
 
 ## 拡張ポイント
 
-**敵AI (`src/engine/AiRegistry.ts`)**
+**敵AI (`src/engine/registry/AiRegistry.ts`)**
 - 敵定義の `aiId` から実行されます
 - 標準AI: `chase`, `stationary`, `random`
 
-**アイテム効果 (`src/engine/ItemEffectRegistry.ts`)**
+**アイテム効果 (`src/engine/registry/ItemEffectRegistry.ts`)**
 - アイテム定義の `effectId` と `params` から実行されます
 - 標準効果: `heal`, `equipWeapon`
 
-新しいAIや効果を追加する場合は、Registryに処理を追加し、設定UIの選択肢（`ConfigPanel.ts` の `aiOptions` / `effectOptions`）も更新してください。
+新しいAIや効果を追加する場合は、Registryに処理を追加し、設定UIの選択肢（`src/app/ui/ConfigPanel.ts` の `aiOptions` / `effectOptions`）も更新してください。
 
 ## UI方針
 

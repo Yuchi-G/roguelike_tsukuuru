@@ -7,8 +7,8 @@
 
 import type { Actor } from "./Entity";
 import type { Game } from "./Game";
-import type { ScriptDefinition } from "./Script";
-import type { TileDefinition, TileType } from "./Tile";
+import type { ScriptDefinition } from "../script/Script";
+import type { TileDefinition, TileType } from "../map/Tile";
 
 /** ゲーム開始時のプレイヤー初期ステータス。 */
 export type PlayerInitialStats = {

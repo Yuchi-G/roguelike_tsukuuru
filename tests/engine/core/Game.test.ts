@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Game } from "../../src/engine/Game";
-import { GameMap } from "../../src/engine/Map";
-import { Player } from "../../src/game/Player";
-import { Tile } from "../../src/engine/Tile";
-import { sampleGameConfig } from "../../src/game/sampleGameConfig";
-import type { GameConfig } from "../../src/engine/GameConfig";
+import { Game } from "../../../src/engine/core/Game";
+import { GameMap } from "../../../src/engine/map/Map";
+import { Player } from "../../../src/game/Player";
+import { Tile } from "../../../src/engine/map/Tile";
+import { sampleGameConfig } from "../../../src/game/sampleGameConfig";
+import type { GameConfig } from "../../../src/engine/core/GameConfig";
 
 // ========================== ヘルパー ==========================
 

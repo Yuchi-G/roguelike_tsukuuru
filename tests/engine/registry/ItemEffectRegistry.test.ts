@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { ItemEffectRegistry, numberParam } from "../../src/engine/ItemEffectRegistry";
-import type { Game } from "../../src/engine/Game";
-import type { Player } from "../../src/game/Player";
-import type { ItemEffectContext } from "../../src/engine/ItemEffectRegistry";
+import { ItemEffectRegistry, numberParam } from "../../../src/engine/registry/ItemEffectRegistry";
+import type { Game } from "../../../src/engine/core/Game";
+import type { Player } from "../../../src/game/Player";
+import type { ItemEffectContext } from "../../../src/engine/registry/ItemEffectRegistry";
 
 function makeContext(overrides: Partial<ItemEffectContext> = {}): ItemEffectContext {
   return {

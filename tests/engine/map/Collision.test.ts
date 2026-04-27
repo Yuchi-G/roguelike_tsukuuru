@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { getBlockingEntityAt } from "../../src/engine/Collision";
-import { Entity } from "../../src/engine/Entity";
-import type { Game } from "../../src/engine/Game";
+import { getBlockingEntityAt } from "../../../src/engine/map/Collision";
+import { Entity } from "../../../src/engine/core/Entity";
+import type { Game } from "../../../src/engine/core/Game";
 
 class TestEntity extends Entity {
   update(_game: Game): void {}

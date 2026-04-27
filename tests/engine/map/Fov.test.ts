@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { Fov } from "../../src/engine/Fov";
-import { GameMap } from "../../src/engine/Map";
-import { Tile } from "../../src/engine/Tile";
+import { Fov } from "../../../src/engine/map/Fov";
+import { GameMap } from "../../../src/engine/map/Map";
+import { Tile } from "../../../src/engine/map/Tile";
 
 function makeFloorMap(w: number, h: number): GameMap {
   const floor = new Tile("floor", ".", "#888", "#000", false);

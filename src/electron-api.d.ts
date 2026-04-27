@@ -1,4 +1,4 @@
-import type { ProjectFileResult, ProjectInfo } from "./engine/ProjectStorage";
+import type { ProjectFileResult, ProjectInfo } from "./app/storage/ProjectStorage";
 
 declare global {
   interface Window {

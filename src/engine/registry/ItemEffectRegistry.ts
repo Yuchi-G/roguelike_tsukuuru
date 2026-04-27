@@ -6,9 +6,9 @@
 // 標準効果（heal / equipWeapon）はこのファイルで登録する。
 // ---------------------------------------------------------------------------
 
-import type { EffectParams } from "./GameConfig";
-import type { Game } from "./Game";
-import type { Player } from "../game/Player";
+import type { EffectParams } from "../core/GameConfig";
+import type { Game } from "../core/Game";
+import type { Player } from "../../game/Player";
 
 /** 効果ハンドラに渡される実行コンテキスト。 */
 export type ItemEffectContext = {

@@ -3,10 +3,10 @@
  * HTML上のCanvasとUI要素を取得し、ゲームとシーンを起動する。
  */
 import "./style.css";
-import { chaseMove } from "./engine/AiRegistry";
-import { ConfigPanel } from "./engine/ConfigPanel";
-import { DesktopProjectStorage } from "./engine/DesktopProjectStorage";
-import { Game } from "./engine/Game";
+import { chaseMove } from "./engine/registry/AiRegistry";
+import { ConfigPanel } from "./app/ui/ConfigPanel";
+import { DesktopProjectStorage } from "./app/storage/DesktopProjectStorage";
+import { Game } from "./engine/core/Game";
 import { MainScene } from "./game/MainScene";
 import { sampleGameConfig } from "./game/sampleGameConfig";
 

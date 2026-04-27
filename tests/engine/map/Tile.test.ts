@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Tile, defaultTileDefinitions } from "../../src/engine/Tile";
+import { Tile, defaultTileDefinitions } from "../../../src/engine/map/Tile";
 
 describe("Tile.wall()", () => {
   it("移動をブロックする壁タイルを生成する", () => {

@@ -5,9 +5,9 @@
 // effectScript があればスクリプトエンジンで実行、なければ ItemEffectRegistry。
 // ---------------------------------------------------------------------------
 
-import { Entity } from "../engine/Entity";
-import type { Game } from "../engine/Game";
-import type { ItemDefinition } from "../engine/GameConfig";
+import { Entity } from "../engine/core/Entity";
+import type { Game } from "../engine/core/Game";
+import type { ItemDefinition } from "../engine/core/GameConfig";
 import type { Player } from "./Player";
 
 /** マップ上に置かれるアイテム。 */

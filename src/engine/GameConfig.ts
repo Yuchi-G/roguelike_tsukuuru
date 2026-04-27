@@ -1,5 +1,6 @@
 import type { Actor } from "./Entity";
 import type { Game } from "./Game";
+import type { ScriptDefinition } from "./Script";
 import type { TileDefinition, TileType } from "./Tile";
 
 export type PlayerInitialStats = {
@@ -33,6 +34,8 @@ export type EnemyDefinition = {
   attackPower: number;
   expValue: number;
   aiId: string;
+  /** aiId の代わりにスクリプトで AI を定義する場合に設定する。 */
+  aiScript?: ScriptDefinition;
 };
 
 export type ItemDefinition = {
@@ -44,6 +47,8 @@ export type ItemDefinition = {
     effectId: string;
     params: EffectParams;
   }>;
+  /** effects の代わりにスクリプトで効果を定義する場合に設定する。 */
+  effectScript?: ScriptDefinition;
 };
 
 export type FloorRangeRule = {

@@ -461,6 +461,223 @@ h2 {
   opacity: 0.48;
 }
 
+/* ========================== スクリプトエディタ ========================== */
+
+.se-editor {
+  display: grid;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.se-header {
+  display: grid;
+  gap: 6px;
+}
+
+.se-section {
+  display: grid;
+  gap: 8px;
+}
+
+.se-section-title {
+  color: #f0d982;
+  font-size: 12px;
+}
+
+.se-var-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.se-var-row input {
+  width: 80px;
+}
+
+.se-nodes {
+  display: grid;
+  gap: 6px;
+}
+
+.se-node {
+  border: 1px solid #2e3a2e;
+  background: rgba(16, 19, 16, 0.6);
+  padding: 6px 8px;
+}
+
+.se-node-if {
+  border-color: #4a5a3a;
+}
+
+.se-node-loop,
+.se-node-while {
+  border-color: #3a4a5a;
+}
+
+.se-node-break {
+  border-color: #5a3a3a;
+}
+
+.se-node-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.se-node-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.se-indent {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 2px solid #2e3a2e;
+  display: grid;
+  gap: 6px;
+}
+
+.se-label {
+  color: #b9caa2;
+  font-weight: 700;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.se-condition {
+  display: grid;
+  gap: 4px;
+}
+
+.se-cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.se-sub-cond {
+  display: flex;
+  gap: 4px;
+  align-items: start;
+}
+
+.se-sub-cond > .se-condition {
+  flex: 1;
+}
+
+.se-action-body {
+  display: grid;
+  gap: 4px;
+}
+
+.se-action-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.se-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.se-field {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: #c9c5b4;
+  font-size: 11px;
+}
+
+.se-field span {
+  white-space: nowrap;
+}
+
+.se-valueref {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.se-vr-label {
+  color: #8a9a7a;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.se-editor input,
+.se-editor select {
+  min-width: 0;
+  border: 1px solid #394339;
+  background: #0c100c;
+  color: #e7e2d2;
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.se-editor select {
+  max-width: 140px;
+}
+
+.se-input-sm {
+  width: 60px;
+}
+
+.se-btn-add {
+  border: 1px dashed #394339;
+  background: transparent;
+  color: #8a9a7a;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.se-btn-add:hover {
+  border-color: #6c855e;
+  color: #b9caa2;
+}
+
+.se-btn-small {
+  border: 1px solid #394339;
+  background: transparent;
+  color: #8a9a7a;
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.se-btn-small:hover {
+  border-color: #6c855e;
+  color: #b9caa2;
+}
+
+.se-btn-icon {
+  border: none;
+  background: transparent;
+  color: #6a7a6a;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.se-btn-icon:hover {
+  color: #b9caa2;
+}
+
+.se-btn-danger:hover {
+  color: #ff8c7a;
+}
+
 /* 狭い画面ではCanvasの下にUIを回す。 */
 @media (max-width: 900px) {
   #app {

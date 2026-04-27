@@ -15,6 +15,12 @@ export class Item extends Entity {
 
   /** プレイヤーが上に乗った時の取得処理。 */
   onPickup(player: Player, game: Game): void {
+    const script = this.definition.effectScript;
+    if (script) {
+      game.scriptInterpreter.run(script, { game, self: player });
+      return;
+    }
+
     for (const effect of this.definition.effects) {
       game.itemEffectRegistry.run(effect.effectId, {
         game,

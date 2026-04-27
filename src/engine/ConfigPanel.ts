@@ -1,5 +1,7 @@
 import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "./GameConfig";
 import type { ProjectInfo, ProjectStorage } from "./ProjectStorage";
+import type { ScriptDefinition } from "./Script";
+import { ScriptEditor } from "./ScriptEditor";
 
 type MessageKey = keyof GameConfig["messages"];
 
@@ -32,6 +34,7 @@ export class ConfigPanel {
   private readonly defaultProjectJson: string;
   private projectStatus = "";
   private projectInfo: ProjectInfo = { filePath: null, isDirty: false };
+  private scriptEditors: ScriptEditor[] = [];
 
   constructor(
     private root: HTMLElement,
@@ -80,6 +83,7 @@ export class ConfigPanel {
       `<button class="config-apply" type="submit">${this.escape(this.submitLabel())}</button>`,
       "</form>",
     ].join("");
+    this.mountScriptEditors();
   }
 
   private renderPlayerSection(): string {
@@ -168,6 +172,7 @@ export class ConfigPanel {
       this.numberInput("攻撃", `${prefix}.attackPower`, enemy.attackPower, 0),
       this.numberInput("EXP", `${prefix}.expValue`, enemy.expValue, 0),
       this.selectInput("AI", `${prefix}.aiId`, enemy.aiId, this.aiOptions),
+      `<div class="script-editor-mount" data-script-target="enemy-ai" data-enemy-id="${this.escape(enemy.id)}"></div>`,
       ...this.config.floorRules.floors.map((rule) => {
         const entry = rule.enemyTable.find((e) => e.enemyId === enemy.id);
         return this.numberInput(
@@ -829,6 +834,36 @@ export class ConfigPanel {
     for (const item of this.config.items) {
       this.addItemToFloorRules(item.id, 0.25);
     }
+  }
+
+  private mountScriptEditors(): void {
+    this.scriptEditors = [];
+    const mounts = this.root.querySelectorAll<HTMLElement>(".script-editor-mount");
+    for (const mount of mounts) {
+      const target = mount.dataset.scriptTarget;
+      const enemyId = mount.dataset.enemyId;
+
+      if (target === "enemy-ai" && enemyId) {
+        const enemy = this.config.enemies.find((e) => e.id === enemyId);
+        if (!enemy) continue;
+        const script = enemy.aiScript ?? this.defaultAiScript(enemy.aiId);
+        const editor = new ScriptEditor(mount, script, () => {
+          enemy.aiScript = editor.getScript();
+          void this.markDirty();
+        });
+        this.scriptEditors.push(editor);
+      }
+    }
+  }
+
+  private defaultAiScript(aiId: string): ScriptDefinition {
+    return {
+      id: aiId,
+      name: aiId,
+      trigger: "ai",
+      variables: [],
+      body: [{ type: "action", action: { type: "doNothing" } }],
+    };
   }
 
   private escape(value: string): string {

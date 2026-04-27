@@ -24,6 +24,11 @@ export class Enemy extends Actor {
   }
 
   override update(game: Game): void {
+    const script = this.definition.aiScript;
+    if (script) {
+      game.scriptInterpreter.run(script, { game, self: this, target: game.player });
+      return;
+    }
     game.aiRegistry.run(this.definition.aiId, { game, enemy: this });
   }
 }

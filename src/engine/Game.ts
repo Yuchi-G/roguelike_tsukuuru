@@ -7,6 +7,7 @@ import { createDefaultItemEffectRegistry, type ItemEffectRegistry } from "./Item
 import { Logger } from "./Logger";
 import type { GameMap } from "./Map";
 import { Renderer } from "./Renderer";
+import { ScriptInterpreter, VariableStore } from "./ScriptInterpreter";
 import { Tile } from "./Tile";
 import { runEnemyTurn } from "./TurnManager";
 import type { GameConfig } from "./GameConfig";
@@ -29,6 +30,8 @@ export class Game {
   public floor = 1;
   public aiRegistry: AiRegistry;
   public itemEffectRegistry: ItemEffectRegistry;
+  public scriptVariables = new VariableStore();
+  public scriptInterpreter = new ScriptInterpreter(this.scriptVariables);
 
   private renderer: Renderer;
   private input = new InputManager();
@@ -433,13 +436,17 @@ export class Game {
       return;
     }
 
-    this.itemEffectRegistry.run(item.effectId, {
-      game: this,
-      player: this.player,
-      itemName: item.name,
-      params: item.params,
-      source: "use",
-    });
+    if (item.useScript) {
+      this.scriptInterpreter.run(item.useScript, { game: this, self: this.player });
+    } else {
+      this.itemEffectRegistry.run(item.effectId, {
+        game: this,
+        player: this.player,
+        itemName: item.name,
+        params: item.params,
+        source: "use",
+      });
+    }
     this.refresh();
   }
 

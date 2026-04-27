@@ -71,9 +71,8 @@ ipcMain.handle("project:new", async () => {
 });
 
 ipcMain.handle("project:open", async () => {
-  if (!(await confirmDiscardUnsaved())) {
-    return { canceled: true };
-  }
+  // 未保存確認は renderer 側 (ConfigPanel.confirmDiscardUnsaved) で実施済み。
+  // ここでは二重に確認しない。
   pendingOpenFilePath = null;
 
   const result = await dialog.showOpenDialog(mainWindow, {

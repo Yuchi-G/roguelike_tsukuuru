@@ -196,3 +196,70 @@ describe("ConfigPanel: プロジェクトを開く", () => {
     expect(onResetToSetup).not.toHaveBeenCalled();
   });
 });
+
+describe("ConfigPanel: JSON preview からの読み込み", () => {
+  let root: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    root = makeRoot();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+  });
+
+  /** JSON preview テキストエリアの値を書き換えてフォームを送信する。 */
+  function submitWithJsonPreview(formRoot: HTMLElement, json: string): void {
+    const textarea = formRoot.querySelector<HTMLTextAreaElement>('textarea[name="project.json"]');
+    if (textarea) {
+      textarea.value = json;
+    }
+    const form = formRoot.querySelector("form");
+    if (form) {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    }
+  }
+
+  it("不正なJSONをpreviewに入力して送信した時、onApply が呼ばれない", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, "{ broken json !!!");
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("不正なJSONをpreviewに入力して送信した時、dirty にならない", async () => {
+    const config = freshConfig();
+    const storage = makeStorage();
+
+    new ConfigPanel(root, config, storage, vi.fn());
+    await flush();
+
+    submitWithJsonPreview(root, "not valid json");
+    await flush();
+
+    expect(storage.setDirty).not.toHaveBeenCalled();
+  });
+
+  it("正常なJSONをpreviewに入力して送信した時、onApply が呼ばれる", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const validJson = JSON.stringify({
+      schemaVersion: 2,
+      player: config.player,
+    });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, validJson);
+    await flush();
+
+    expect(onApply).toHaveBeenCalled();
+  });
+});

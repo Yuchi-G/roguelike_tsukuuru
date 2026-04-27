@@ -383,7 +383,11 @@ export class ConfigPanel {
     const originalProject = this.stringValue(formData, "project.original", "");
     const submittedProject = this.stringValue(formData, "project.json", "");
     if (submittedProject !== originalProject) {
-      this.importProject(submittedProject);
+      if (!this.importProject(submittedProject)) {
+        this.updateProjectStatus("JSON previewの形式が正しくありません。");
+        this.render();
+        return;
+      }
       void this.markDirty("JSON previewから設定を読み込みました。保存はまだ行っていません。");
       this.onApply();
       this.render();

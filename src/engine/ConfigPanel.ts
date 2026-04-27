@@ -766,6 +766,10 @@ export class ConfigPanel {
       if (typeof parsed !== "object" || parsed === null) {
         return false;
       }
+      const version = parsed.schemaVersion;
+      if (typeof version !== "number" || version > projectSchemaVersion) {
+        return false;
+      }
       if (parsed.player) Object.assign(this.config.player, parsed.player);
       if (parsed.dungeon) Object.assign(this.config.dungeon, parsed.dungeon);
       if (parsed.tiles) this.config.tiles = parsed.tiles;
@@ -776,7 +780,7 @@ export class ConfigPanel {
       if (parsed.fov) Object.assign(this.config.fov, parsed.fov);
       if (parsed.progression) Object.assign(this.config.progression, parsed.progression);
       if (parsed.messageTemplates) Object.assign(messageTemplates, parsed.messageTemplates);
-      if (parsed.schemaVersion !== projectSchemaVersion) {
+      if (version < projectSchemaVersion) {
         this.migrateFloorRuleCoverage();
       }
       this.applyMessageTemplates();

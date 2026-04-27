@@ -197,6 +197,18 @@ describe("ConfigPanel: プロジェクトを開く", () => {
   });
 });
 
+/** JSON preview テキストエリアの値を書き換えてフォームを送信する。 */
+function submitWithJsonPreview(formRoot: HTMLElement, json: string): void {
+  const textarea = formRoot.querySelector<HTMLTextAreaElement>('textarea[name="project.json"]');
+  if (textarea) {
+    textarea.value = json;
+  }
+  const form = formRoot.querySelector("form");
+  if (form) {
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  }
+}
+
 describe("ConfigPanel: JSON preview からの読み込み", () => {
   let root: HTMLElement;
 
@@ -205,18 +217,6 @@ describe("ConfigPanel: JSON preview からの読み込み", () => {
     root = makeRoot();
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
-
-  /** JSON preview テキストエリアの値を書き換えてフォームを送信する。 */
-  function submitWithJsonPreview(formRoot: HTMLElement, json: string): void {
-    const textarea = formRoot.querySelector<HTMLTextAreaElement>('textarea[name="project.json"]');
-    if (textarea) {
-      textarea.value = json;
-    }
-    const form = formRoot.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-  }
 
   it("不正なJSONをpreviewに入力して送信した時、onApply が呼ばれない", async () => {
     const config = freshConfig();
@@ -258,6 +258,103 @@ describe("ConfigPanel: JSON preview からの読み込み", () => {
     await flush();
 
     submitWithJsonPreview(root, validJson);
+    await flush();
+
+    expect(onApply).toHaveBeenCalled();
+  });
+});
+
+describe("ConfigPanel: schemaVersion の検証", () => {
+  let root: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    root = makeRoot();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+  });
+
+  it("schemaVersion が無いJSONは読み込みを拒否する", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const noVersionJson = JSON.stringify({ player: config.player });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, noVersionJson);
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("未来の schemaVersion (現在より大きい) は読み込みを拒否する", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const futureJson = JSON.stringify({
+      schemaVersion: 999,
+      player: config.player,
+    });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, futureJson);
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("schemaVersion が文字列の場合は読み込みを拒否する", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const stringVersionJson = JSON.stringify({
+      schemaVersion: "2",
+      player: config.player,
+    });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, stringVersionJson);
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("過去の schemaVersion (現在より小さい) は読み込める", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const oldVersionJson = JSON.stringify({
+      schemaVersion: 1,
+      player: config.player,
+    });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, oldVersionJson);
+    await flush();
+
+    expect(onApply).toHaveBeenCalled();
+  });
+
+  it("現在の schemaVersion と一致するJSONは読み込める", async () => {
+    const config = freshConfig();
+    const onApply = vi.fn();
+    const storage = makeStorage();
+    const currentJson = JSON.stringify({
+      schemaVersion: 2,
+      player: config.player,
+    });
+
+    new ConfigPanel(root, config, storage, onApply);
+    await flush();
+
+    submitWithJsonPreview(root, currentJson);
     await flush();
 
     expect(onApply).toHaveBeenCalled();

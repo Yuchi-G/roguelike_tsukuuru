@@ -5,6 +5,8 @@ declare global {
     desktopProject?: {
       newProject(): Promise<ProjectInfo>;
       openProject(): Promise<ProjectFileResult>;
+      confirmOpen(): Promise<ProjectInfo>;
+      discardPendingOpen(): Promise<ProjectInfo>;
       saveProject(json: string): Promise<ProjectFileResult>;
       saveProjectAs(json: string): Promise<ProjectFileResult>;
       getCurrentProjectInfo(): Promise<ProjectInfo>;

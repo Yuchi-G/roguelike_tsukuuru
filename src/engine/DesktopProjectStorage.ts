@@ -26,6 +26,14 @@ export class DesktopProjectStorage implements ProjectStorage {
     return this.api.openProject();
   }
 
+  confirmOpen(): Promise<ProjectInfo> {
+    return this.api.confirmOpen();
+  }
+
+  discardPendingOpen(): Promise<ProjectInfo> {
+    return this.api.discardPendingOpen();
+  }
+
   saveProject(json: string): Promise<ProjectFileResult> {
     return this.api.saveProject(json);
   }

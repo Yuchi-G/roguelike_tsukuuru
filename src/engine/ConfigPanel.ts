@@ -718,16 +718,14 @@ export class ConfigPanel {
     }
 
     if (!this.importProject(result.json)) {
+      await this.storage.discardPendingOpen();
       this.updateProjectStatus("プロジェクトJSONの形式が正しくありません。");
       this.render();
       return;
     }
 
-    this.projectInfo = {
-      filePath: result.filePath ?? null,
-      isDirty: false,
-    };
-    await this.storage.setDirty(false);
+    // JSON 形式検証に成功したので、main process 側で保留中のファイルパスを確定する
+    this.projectInfo = await this.storage.confirmOpen();
     this.onResetToSetup();
     this.updateProjectStatus("プロジェクトを読み込みました。");
     this.render();

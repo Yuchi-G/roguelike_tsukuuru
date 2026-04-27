@@ -302,11 +302,11 @@ export class Game {
   private applyPlayerConfigToCurrentPlayer(): void {
     const gainedLevels = Math.max(0, this.player.level - this.config.player.level);
     const previousMaxHp = this.player.maxHp;
-    const nextMaxHp = this.config.player.hp + gainedLevels * this.config.progression.hpGainPerLevel;
+    const nextMaxHp = Math.max(1, Math.round(this.config.player.hp + gainedLevels * this.config.progression.hpGainPerLevel));
     const hpDelta = nextMaxHp - previousMaxHp;
     this.player.maxHp = nextMaxHp;
-    this.player.hp = Math.min(this.player.maxHp, Math.max(0, this.player.hp + hpDelta));
-    this.player.attackPower = this.config.player.attackPower + gainedLevels * this.config.progression.attackGainPerLevel;
+    this.player.hp = Math.min(this.player.maxHp, Math.max(0, Math.round(this.player.hp + hpDelta)));
+    this.player.attackPower = Math.max(0, Math.round(this.config.player.attackPower + gainedLevels * this.config.progression.attackGainPerLevel));
   }
 
   private renderBagControls(): string {

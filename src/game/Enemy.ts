@@ -5,9 +5,9 @@
 // aiScript があればスクリプトエンジンで実行、なければ AiRegistry にフォールバック。
 // ---------------------------------------------------------------------------
 
-import type { Game } from "../engine/Game";
-import { Actor } from "../engine/Entity";
-import type { EnemyDefinition } from "../engine/GameConfig";
+import type { Game } from "../engine/core/Game";
+import { Actor } from "../engine/core/Entity";
+import type { EnemyDefinition } from "../engine/core/GameConfig";
 
 /** 敵キャラクター。毎ターン update() で AI が呼ばれる。 */
 export class Enemy extends Actor {

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ConfigPanel } from "../../src/engine/ConfigPanel";
-import type { ProjectStorage, ProjectInfo, ProjectFileResult } from "../../src/engine/ProjectStorage";
-import { sampleGameConfig } from "../../src/game/sampleGameConfig";
-import type { GameConfig } from "../../src/engine/GameConfig";
+import { ConfigPanel } from "../../../src/app/ui/ConfigPanel";
+import type { ProjectStorage, ProjectInfo, ProjectFileResult } from "../../../src/app/storage/ProjectStorage";
+import { sampleGameConfig } from "../../../src/game/sampleGameConfig";
+import type { GameConfig } from "../../../src/engine/core/GameConfig";
 
 // ========================== モック ==========================
 

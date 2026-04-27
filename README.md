@@ -143,23 +143,38 @@ npm run build
 ```text
 src/
   engine/
-    GameConfig.ts        ツクール風設定の型定義
-    AiRegistry.ts        敵AIの登録と実行
-    ItemEffectRegistry.ts アイテム効果の登録と実行
-    ProjectStorage.ts     プロジェクト保存API
-    DesktopProjectStorage.ts Electron IPC経由の保存API実装
-    EntityFactory.ts     設定からEntityを作るファクトリ
-    Game.ts              ゲーム全体の状態管理
-    Renderer.ts          Canvas描画
-    InputManager.ts      キーボード入力
-    TurnManager.ts       ターン管理関数
-    Map.ts               2Dグリッドマップ
-    Tile.ts              タイル定義
-    Entity.ts            Entity基底クラスとActor
-    Collision.ts         衝突判定関数
-    DungeonGenerator.ts  ランダムダンジョン生成
-    Fov.ts               簡易視界
-    Logger.ts            ゲームログ
+    core/
+      Game.ts              ゲーム全体の状態管理
+      TurnManager.ts       ターン管理関数
+      Entity.ts            Entity基底クラスとActor
+      EntityFactory.ts     設定からEntityを作るファクトリ
+      GameConfig.ts        ツクール風設定の型定義
+    map/
+      Map.ts               2Dグリッドマップ
+      Tile.ts              タイル定義
+      DungeonGenerator.ts  ランダムダンジョン生成
+      Fov.ts               簡易視界
+      Collision.ts         衝突判定関数
+    input/
+      InputManager.ts      キーボード入力
+    rendering/
+      Renderer.ts          Canvas描画
+    script/
+      Script.ts            ビジュアルスクリプト型定義
+      ScriptInterpreter.ts スクリプト実行エンジン
+    registry/
+      AiRegistry.ts        敵AIの登録と実行
+      ItemEffectRegistry.ts アイテム効果の登録と実行
+    utils/
+      Logger.ts            ゲームログ
+      escapeHtml.ts        HTMLエスケープ
+  app/
+    ui/
+      ConfigPanel.ts       設定UI、保存/読込/初期化
+      ScriptEditor.ts      ビジュアルスクリプトエディタ
+    storage/
+      ProjectStorage.ts    プロジェクト保存API
+      DesktopProjectStorage.ts Electron IPC経由の保存API実装
   game/
     sampleGameConfig.ts  サンプルゲーム用の設定
     Player.ts            プレイヤー
@@ -249,6 +264,6 @@ customEffectIds: ["fullHeal"],
 
 - 外部ゲームライブラリは使わず、Canvas APIで描画しています。
 - ファイル操作はElectron main processが担当し、rendererはpreload経由のAPIだけを使います。
-- エンジン部分は`src/engine`、サンプルゲーム固有の実装は`src/game`に分けています。
+- エンジン部分は`src/engine`（責務別サブディレクトリ）、アプリUI・保存は`src/app`、サンプルゲーム固有の実装は`src/game`に分けています。
 - 標準の`chase` AIは最短経路探索を使わず、プレイヤーとのx/y差分で単純に近づきます。
 - 初期MVPのため、プレイ中のセーブデータ、オンライン機能、3D描画は実装していません。

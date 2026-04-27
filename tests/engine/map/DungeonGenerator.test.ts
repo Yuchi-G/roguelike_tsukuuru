@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { DungeonGenerator, type Room } from "../../src/engine/DungeonGenerator";
+import { DungeonGenerator, type Room } from "../../../src/engine/map/DungeonGenerator";
 
 describe("DungeonGenerator.center()", () => {
   it("部屋の中心座標を返す（切り捨て）", () => {

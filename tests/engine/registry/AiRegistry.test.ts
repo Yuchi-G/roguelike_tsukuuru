@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { AiRegistry, chaseMove } from "../../src/engine/AiRegistry";
-import { Actor } from "../../src/engine/Entity";
-import type { Game } from "../../src/engine/Game";
+import { AiRegistry, chaseMove } from "../../../src/engine/registry/AiRegistry";
+import { Actor } from "../../../src/engine/core/Entity";
+import type { Game } from "../../../src/engine/core/Game";
 
 class TestActor extends Actor {
   update(_game: Game): void {}

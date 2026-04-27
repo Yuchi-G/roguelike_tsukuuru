@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Logger } from "../../src/engine/Logger";
+import { Logger } from "../../../src/engine/utils/Logger";
 
 describe("Logger.add()", () => {
   it("メッセージを先頭に追加する", () => {

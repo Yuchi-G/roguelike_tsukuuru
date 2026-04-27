@@ -6,9 +6,9 @@
 // ---------------------------------------------------------------------------
 
 import type { EnemyDefinition, GameConfig, ItemDefinition } from "./GameConfig";
-import { Enemy } from "../game/Enemy";
-import { Item } from "../game/Item";
-import { Player } from "../game/Player";
+import { Enemy } from "../../game/Enemy";
+import { Item } from "../../game/Item";
+import { Player } from "../../game/Player";
 
 /** 設定値からゲームエンティティを生成するファクトリ。 */
 export class EntityFactory {

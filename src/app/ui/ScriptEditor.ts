@@ -13,7 +13,7 @@ import type {
   ScriptNode,
   ScriptValue,
   ValueRef,
-} from "./Script";
+} from "../../engine/script/Script";
 
 // ========================== 選択肢定義 ==========================
 

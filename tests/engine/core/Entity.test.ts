@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { Actor } from "../../src/engine/Entity";
-import type { Game } from "../../src/engine/Game";
+import { Actor } from "../../../src/engine/core/Entity";
+import type { Game } from "../../../src/engine/core/Game";
 
 class TestActor extends Actor {
   update(_game: Game): void {}

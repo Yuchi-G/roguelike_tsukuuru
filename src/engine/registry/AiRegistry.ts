@@ -6,8 +6,8 @@
 // カスタムAIは main.ts 側で追加登録する。
 // ---------------------------------------------------------------------------
 
-import type { Actor } from "./Entity";
-import type { Game } from "./Game";
+import type { Actor } from "../core/Entity";
+import type { Game } from "../core/Game";
 
 /** AIハンドラに渡される実行コンテキスト。 */
 export type EnemyAiContext = {

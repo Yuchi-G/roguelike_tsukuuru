@@ -1,7 +1,7 @@
-import type { Entity } from "./Entity";
-import type { Fov } from "./Fov";
-import type { RenderConfig } from "./GameConfig";
-import type { GameMap } from "./Map";
+import type { Entity } from "../core/Entity";
+import type { Fov } from "../map/Fov";
+import type { RenderConfig } from "../core/GameConfig";
+import type { GameMap } from "../map/Map";
 
 /** タイル文字、敵、アイテム、ゲームオーバー表示をCanvasに描くクラス。 */
 export class Renderer {

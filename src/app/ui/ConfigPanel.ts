@@ -5,10 +5,10 @@
 // イベント委譲で操作を受け付ける。プロジェクトの保存/読込/初期化も担当する。
 // ---------------------------------------------------------------------------
 
-import { escapeHtml } from "./escapeHtml";
-import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "./GameConfig";
-import type { ProjectInfo, ProjectStorage } from "./ProjectStorage";
-import type { ScriptDefinition } from "./Script";
+import { escapeHtml } from "../../engine/utils/escapeHtml";
+import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "../../engine/core/GameConfig";
+import type { ProjectInfo, ProjectStorage } from "../storage/ProjectStorage";
+import type { ScriptDefinition } from "../../engine/script/Script";
 import { ScriptEditor } from "./ScriptEditor";
 
 type MessageKey = keyof GameConfig["messages"];

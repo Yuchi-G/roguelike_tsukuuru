@@ -5,10 +5,10 @@
 // 階層ルールに従って敵・アイテムを配置し、Game.start() で開始する。
 // ---------------------------------------------------------------------------
 
-import { DungeonGenerator } from "../engine/DungeonGenerator";
-import { EntityFactory } from "../engine/EntityFactory";
-import type { Game } from "../engine/Game";
-import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "../engine/GameConfig";
+import { DungeonGenerator } from "../engine/map/DungeonGenerator";
+import { EntityFactory } from "../engine/core/EntityFactory";
+import type { Game } from "../engine/core/Game";
+import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "../engine/core/GameConfig";
 import { Enemy } from "./Enemy";
 import { Item } from "./Item";
 import { Player } from "./Player";

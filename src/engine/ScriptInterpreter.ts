@@ -104,6 +104,7 @@ export class ScriptInterpreter {
 
   /** スクリプトを実行する。 */
   run(script: ScriptDefinition, context: ScriptContext): void {
+    this.nodeExecutions = 0;
     this.variables.clearLocal();
 
     for (const variable of script.variables) {

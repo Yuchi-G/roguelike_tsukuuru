@@ -4,6 +4,7 @@ const path = require("node:path");
 
 let mainWindow = null;
 let currentFilePath = null;
+let pendingOpenFilePath = null;
 let isDirty = false;
 
 const isDev = process.env.VITE_DEV_SERVER_URL !== undefined;
@@ -64,14 +65,15 @@ async function createWindow() {
 
 ipcMain.handle("project:new", async () => {
   currentFilePath = null;
+  pendingOpenFilePath = null;
   isDirty = false;
   return projectInfo();
 });
 
 ipcMain.handle("project:open", async () => {
-  if (!(await confirmDiscardUnsaved())) {
-    return { canceled: true };
-  }
+  // 未保存確認は renderer 側 (ConfigPanel.confirmDiscardUnsaved) で実施済み。
+  // ここでは二重に確認しない。
+  pendingOpenFilePath = null;
 
   const result = await dialog.showOpenDialog(mainWindow, {
     title: "プロジェクトを開く",
@@ -80,16 +82,18 @@ ipcMain.handle("project:open", async () => {
   });
 
   if (result.canceled || result.filePaths.length === 0) {
+    pendingOpenFilePath = null;
     return { canceled: true };
   }
 
   try {
     const filePath = result.filePaths[0];
     const json = await fs.readFile(filePath, "utf8");
-    currentFilePath = filePath;
-    isDirty = false;
+    pendingOpenFilePath = filePath;
+    // currentFilePath はまだ更新しない。renderer 側で JSON 形式検証に成功してから確定する。
     return { canceled: false, json, filePath };
   } catch (error) {
+    pendingOpenFilePath = null;
     return { canceled: false, error: error instanceof Error ? error.message : String(error) };
   }
 });
@@ -110,6 +114,22 @@ ipcMain.handle("project:save", async (_event, json) => {
 
 ipcMain.handle("project:save-as", async (_event, json) => {
   return saveAs(json);
+});
+
+ipcMain.handle("project:confirm-open", () => {
+  if (pendingOpenFilePath === null) {
+    return projectInfo();
+  }
+
+  currentFilePath = pendingOpenFilePath;
+  pendingOpenFilePath = null;
+  isDirty = false;
+  return projectInfo();
+});
+
+ipcMain.handle("project:discard-pending-open", () => {
+  pendingOpenFilePath = null;
+  return projectInfo();
 });
 
 ipcMain.handle("project:info", () => projectInfo());

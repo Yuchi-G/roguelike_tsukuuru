@@ -26,9 +26,12 @@ export type ProjectFileResult = {
 export interface ProjectStorage {
   newProject(): Promise<ProjectInfo>;
   openProject(): Promise<ProjectFileResult>;
+  /** JSON 形式検証に成功した後、main process 側で保留中のファイルパスを確定する。 */
+  confirmOpen(): Promise<ProjectInfo>;
+  /** JSON 形式検証に失敗した後、main process 側で保留中のファイルパスを破棄する。 */
+  discardPendingOpen(): Promise<ProjectInfo>;
   saveProject(json: string): Promise<ProjectFileResult>;
   saveProjectAs(json: string): Promise<ProjectFileResult>;
   getCurrentProjectInfo(): Promise<ProjectInfo>;
   setDirty(isDirty: boolean): Promise<ProjectInfo>;
 }
-

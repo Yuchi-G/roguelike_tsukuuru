@@ -692,4 +692,26 @@ describe("無限ループ防止", () => {
     // MAX_ITERATIONS=1000 なので1000で止まる
     expect(store.get("global", "x")).toBe(1000);
   });
+
+  it("nodeExecutions は run ごとにリセットされる", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const self = makeActor(0, 0);
+
+    // 1回目: 無限ループで MAX_NODE_EXECUTIONS に到達させる
+    interp.run(script([{
+      type: "while",
+      condition: { type: "true" },
+      body: [actionNode({ type: "addVariable", scope: "global", name: "a", op: "+", value: lit(1) })],
+    }]), { game, self });
+
+    // 2回目: リセットされていれば正常に実行できる
+    store.set("global", "b", 0);
+    interp.run(script([
+      actionNode({ type: "setVariable", scope: "global", name: "b", value: lit(42) }),
+    ]), { game, self });
+
+    expect(store.get("global", "b")).toBe(42);
+  });
 });

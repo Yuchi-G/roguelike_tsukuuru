@@ -1,5 +1,6 @@
 import { getBlockingEntityAt } from "./Collision";
 import type { Actor, Entity } from "./Entity";
+import { escapeHtml } from "./escapeHtml";
 import { Fov } from "./Fov";
 import { InputManager, type Direction } from "./InputManager";
 import { createDefaultAiRegistry, type AiRegistry } from "./AiRegistry";
@@ -282,7 +283,7 @@ export class Game {
 
     this.logElement.innerHTML = this.logger
       .all()
-      .map((message) => `<li>${message}</li>`)
+      .map((message) => `<li>${escapeHtml(message)}</li>`)
       .join("");
   }
 
@@ -302,11 +303,11 @@ export class Game {
   private applyPlayerConfigToCurrentPlayer(): void {
     const gainedLevels = Math.max(0, this.player.level - this.config.player.level);
     const previousMaxHp = this.player.maxHp;
-    const nextMaxHp = this.config.player.hp + gainedLevels * this.config.progression.hpGainPerLevel;
+    const nextMaxHp = Math.max(1, Math.round(this.config.player.hp + gainedLevels * this.config.progression.hpGainPerLevel));
     const hpDelta = nextMaxHp - previousMaxHp;
     this.player.maxHp = nextMaxHp;
-    this.player.hp = Math.min(this.player.maxHp, Math.max(0, this.player.hp + hpDelta));
-    this.player.attackPower = this.config.player.attackPower + gainedLevels * this.config.progression.attackGainPerLevel;
+    this.player.hp = Math.min(this.player.maxHp, Math.max(0, Math.round(this.player.hp + hpDelta)));
+    this.player.attackPower = Math.max(0, Math.round(this.config.player.attackPower + gainedLevels * this.config.progression.attackGainPerLevel));
   }
 
   private renderBagControls(): string {
@@ -322,7 +323,7 @@ export class Game {
     const items = this.player.itemBag.length > 0
       ? this.player.itemBag.map((item, index) => [
         "<li>",
-        `<span>${item.name} ${item.description}</span>`,
+        `<span>${escapeHtml(item.name)} ${escapeHtml(item.description)}</span>`,
         `<button type="button" data-action="use-bag-item" data-index="${index}">使う</button>`,
         "</li>",
       ].join("")).join("")
@@ -339,7 +340,7 @@ export class Game {
     const dropOptions = this.player.itemBag
       .map((item, index) => [
         '<li>',
-        `<span>${item.name} ${item.description}</span>`,
+        `<span>${escapeHtml(item.name)} ${escapeHtml(item.description)}</span>`,
         `<button type="button" data-action="replace-bag-item" data-index="${index}">これを捨てる</button>`,
         "</li>",
       ].join(""))
@@ -347,7 +348,7 @@ export class Game {
 
     return [
       '<div class="bag-choice">',
-      `<strong>${this.pendingBagItem.name}を拾う？</strong>`,
+      `<strong>${escapeHtml(this.pendingBagItem.name)}を拾う？</strong>`,
       '<p>拾う場合は、捨てるアイテムを選んでください。</p>',
       `<ul>${dropOptions}</ul>`,
       '<button type="button" data-action="discard-picked-item">拾わず捨てる</button>',

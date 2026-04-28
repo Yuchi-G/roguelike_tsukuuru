@@ -35,13 +35,10 @@ const ACTION_TYPES: Option[] = [
   ["setStat", "ステータス変更"],
   ["setVariable", "変数を設定"],
   ["addVariable", "変数を加算"],
-  ["addStatus", "状態異常を付与"],
-  ["removeStatus", "状態異常を解除"],
+  // addStatus / removeStatus / useSkill / wait は未実装のため非表示
   ["offerBagItem", "バッグに入れる"],
   ["equipWeapon", "武器を装備"],
-  ["useSkill", "スキル使用"],
   ["log", "ログ表示"],
-  ["wait", "待機"],
   ["endGame", "ゲーム終了"],
   ["doNothing", "何もしない"],
 ];
@@ -52,7 +49,7 @@ const CONDITION_TYPES: Option[] = [
   ["or", "いずれか満たす (OR)"],
   ["not", "否定 (NOT)"],
   ["hasItem", "アイテム所持"],
-  ["hasStatus", "状態異常あり"],
+  // hasStatus は未実装のため非表示
   ["inRange", "射程内"],
   ["inFov", "視界内"],
   ["random", "確率"],
@@ -71,12 +68,8 @@ const STATS: Option[] = [
   ["hp", "HP"],
   ["maxHp", "最大HP"],
   ["hpPercent", "HP%"],
-  ["mp", "MP"],
-  ["maxMp", "最大MP"],
-  ["mpPercent", "MP%"],
+  // mp / maxMp / mpPercent / def / spd は未実装のため非表示
   ["atk", "攻撃力"],
-  ["def", "防御力"],
-  ["spd", "速度"],
   ["level", "レベル"],
   ["exp", "経験値"],
   ["floor", "階層"],
@@ -121,16 +114,9 @@ const VALUEREF_TYPES: Option[] = [
 const TRIGGERS: Option[] = [
   ["ai", "AI"],
   ["itemEffect", "アイテム効果"],
-  ["skillEffect", "スキル効果"],
-  ["onPickup", "拾った時"],
-  ["onUse", "使った時"],
-  ["onTurnStart", "ターン開始"],
-  ["onTurnEnd", "ターン終了"],
-  ["onDamaged", "ダメージ時"],
-  ["onDeath", "死亡時"],
-  ["onMapEnter", "マップ進入"],
-  ["onStepOn", "踏んだ時"],
-  ["onExamine", "調べた時"],
+  // 以下はエンジンが発火しない未実装トリガーのため非表示
+  // skillEffect / onPickup / onUse / onTurnStart / onTurnEnd
+  // onDamaged / onDeath / onMapEnter / onStepOn / onExamine
   ["manual", "手動"],
 ];
 
@@ -793,12 +779,14 @@ export class ScriptEditor {
     return `<label class="se-field"><span>${this.esc(label)}</span><input ${attrs} value="${this.esc(value)}" /></label>`;
   }
 
-  /** select 要素を返す。 */
+  /** select 要素を返す。現在値が選択肢にない場合は一時的な項目を追加する。 */
   private sel(attrs: string, value: string, options: Option[]): string {
+    const hasValue = options.some(([v]) => v === value);
+    const extraOption = hasValue ? "" : `<option value="${this.esc(value)}" selected>(未実装) ${this.esc(value)}</option>`;
     const optionsHtml = options
       .map(([v, label]) => `<option value="${this.esc(v)}"${v === value ? " selected" : ""}>${this.esc(label)}</option>`)
       .join("");
-    return `<select ${attrs}>${optionsHtml}</select>`;
+    return `<select ${attrs}>${extraOption}${optionsHtml}</select>`;
   }
 
   private esc(s: string): string {

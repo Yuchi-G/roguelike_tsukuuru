@@ -15,8 +15,11 @@ function makeActor(x: number, y: number, hp = 10, maxHp = 20, atk = 5): TestActo
   return new TestActor(x, y, "@", "white", "TestActor", hp, maxHp, atk);
 }
 
-function makeFov(visible = true): Fov {
-  return { isVisible: vi.fn(() => visible) } as unknown as Fov;
+function makeFov(visible = true, visibleFrom = true): Fov {
+  return {
+    isVisible: vi.fn(() => visible),
+    isVisibleFrom: vi.fn(() => visibleFrom),
+  } as unknown as Fov;
 }
 
 type TestLogger = { messages: string[]; add: ReturnType<typeof vi.fn>; all: ReturnType<typeof vi.fn> };
@@ -41,8 +44,10 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     isGameOver: false,
     fov: makeFov(true),
     logger,
+    map: {},
     config: {
       items: [],
+      fov: { radius: 8 },
       messages: {
         weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
       },
@@ -195,19 +200,42 @@ describe("evaluateCondition", () => {
     expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
   });
 
-  it("inFov: Fovが可視なら真", () => {
+  it("inFov: observerがプレイヤーならisVisibleで判定", () => {
     const interp = new ScriptInterpreter();
-    const game = makeGame({ fov: makeFov(true) });
+    const fov = makeFov(true);
+    const game = makeGame({ fov });
     const self = makeActor(0, 0);
     const cond: Condition = { type: "inFov", target: "self", observer: "player" };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
+    expect(fov.isVisible).toHaveBeenCalled();
+    expect(fov.isVisibleFrom).not.toHaveBeenCalled();
   });
 
-  it("inFov: Fovが不可視なら偽", () => {
+  it("inFov: observerがプレイヤーで不可視なら偽", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame({ fov: makeFov(false) });
     const self = makeActor(0, 0);
     const cond: Condition = { type: "inFov", target: "self", observer: "player" };
+    expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
+  });
+
+  it("inFov: observerが敵ならisVisibleFromで判定", () => {
+    const interp = new ScriptInterpreter();
+    const fov = makeFov(false, true);
+    const game = makeGame({ fov });
+    const self = makeActor(3, 3); // 敵（observer=self, target=player）
+    const cond: Condition = { type: "inFov", target: "player", observer: "self" };
+    expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
+    expect(fov.isVisible).not.toHaveBeenCalled();
+    expect(fov.isVisibleFrom).toHaveBeenCalled();
+  });
+
+  it("inFov: observerが敵で見通せなければ偽", () => {
+    const interp = new ScriptInterpreter();
+    const fov = makeFov(true, false);
+    const game = makeGame({ fov });
+    const self = makeActor(3, 3);
+    const cond: Condition = { type: "inFov", target: "player", observer: "self" };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
   });
 

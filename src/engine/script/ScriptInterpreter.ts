@@ -242,7 +242,11 @@ export class ScriptInterpreter {
         const observed = this.resolveTarget(condition.target, context);
         const observer = this.resolveTarget(condition.observer, context);
         if (!observed || !observer) return false;
-        return context.game.fov.isVisible(observed.x, observed.y);
+        if (observer.id === context.game.player.id) {
+          return context.game.fov.isVisible(observed.x, observed.y);
+        }
+        const radius = context.game.config.fov.radius;
+        return context.game.fov.isVisibleFrom(context.game.map, observer.x, observer.y, observed.x, observed.y, radius);
       }
 
       case "random": {

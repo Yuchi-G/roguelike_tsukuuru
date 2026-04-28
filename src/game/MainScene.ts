@@ -66,7 +66,9 @@ export class MainScene {
       const rule = this.ruleForFloor(this.floor);
       const enemyCount = this.randomInt(rule.enemyCount.min, rule.enemyCount.max);
       for (let j = 0; j < enemyCount; j += 1) {
-        const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
+        const pos = this.unoccupiedFloor(generator, rooms, occupied);
+        if (!pos) break;
+        const [x, y] = pos;
         enemies.push(this.factory.createEnemy(
           x,
           y,
@@ -79,8 +81,10 @@ export class MainScene {
 
       for (const itemDrop of rule.itemDrops) {
         if (Math.random() < itemDrop.chance) {
+          const pos = this.unoccupiedFloor(generator, rooms, occupied);
+          if (!pos) break;
+          const [x, y] = pos;
           const itemDefinition = this.findItemDefinition(itemDrop.itemId);
-          const [x, y] = this.unoccupiedFloor(generator, rooms, occupied);
           items.push(this.factory.createItem(x, y, itemDefinition));
           occupied.add(this.key(x, y));
         }
@@ -107,15 +111,28 @@ export class MainScene {
     this.load(this.floor + 1, this.game.player);
   }
 
-  /** 配置済みの場所を避けながら床座標を探す。 */
-  private unoccupiedFloor(generator: DungeonGenerator, rooms: Array<{ x: number; y: number; width: number; height: number }>, occupied: Set<string>): [number, number] {
+  /** 配置済みの場所を避けながら床座標を探す。見つからなければ null を返す。 */
+  private unoccupiedFloor(generator: DungeonGenerator, rooms: Array<{ x: number; y: number; width: number; height: number }>, occupied: Set<string>): [number, number] | null {
+    // まずランダム試行で素早く探す
     for (let attempts = 0; attempts < 100; attempts += 1) {
       const [x, y] = generator.randomFloorPosition(rooms);
       if (!occupied.has(this.key(x, y))) {
         return [x, y];
       }
     }
-    return generator.center(rooms[0]);
+
+    // ランダムで見つからなければ、全部屋の内側を走査して確実に探す
+    for (const room of rooms) {
+      for (let y = room.y + 1; y < room.y + room.height - 1; y += 1) {
+        for (let x = room.x + 1; x < room.x + room.width - 1; x += 1) {
+          if (!occupied.has(this.key(x, y))) {
+            return [x, y];
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   private key(x: number, y: number): string {

@@ -15,8 +15,11 @@ function makeActor(x: number, y: number, hp = 10, maxHp = 20, atk = 5): TestActo
   return new TestActor(x, y, "@", "white", "TestActor", hp, maxHp, atk);
 }
 
-function makeFov(visible = true): Fov {
-  return { isVisible: vi.fn(() => visible) } as unknown as Fov;
+function makeFov(visible = true, visibleFrom = true): Fov {
+  return {
+    isVisible: vi.fn(() => visible),
+    isVisibleFrom: vi.fn(() => visibleFrom),
+  } as unknown as Fov;
 }
 
 type TestLogger = { messages: string[]; add: ReturnType<typeof vi.fn>; all: ReturnType<typeof vi.fn> };
@@ -41,8 +44,10 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     isGameOver: false,
     fov: makeFov(true),
     logger,
+    map: {},
     config: {
       items: [],
+      fov: { radius: 8 },
       messages: {
         weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
       },
@@ -97,6 +102,21 @@ describe("VariableStore", () => {
     expect(store.get("global", "nonexistent")).toBe(0);
     expect(store.get("entity", "nonexistent", "any")).toBe(0);
     expect(store.get("local", "nonexistent")).toBe(0);
+  });
+
+  it("has: 変数の存在を確認できる", () => {
+    const store = new VariableStore();
+    expect(store.has("global", "flag")).toBe(false);
+    store.set("global", "flag", 1);
+    expect(store.has("global", "flag")).toBe(true);
+  });
+
+  it("has: エンティティ変数はIDごとに判定される", () => {
+    const store = new VariableStore();
+    expect(store.has("entity", "count", "enemy-a")).toBe(false);
+    store.set("entity", "count", 10, "enemy-a");
+    expect(store.has("entity", "count", "enemy-a")).toBe(true);
+    expect(store.has("entity", "count", "enemy-b")).toBe(false);
   });
 });
 
@@ -180,19 +200,42 @@ describe("evaluateCondition", () => {
     expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
   });
 
-  it("inFov: Fovが可視なら真", () => {
+  it("inFov: observerがプレイヤーならisVisibleで判定", () => {
     const interp = new ScriptInterpreter();
-    const game = makeGame({ fov: makeFov(true) });
+    const fov = makeFov(true);
+    const game = makeGame({ fov });
     const self = makeActor(0, 0);
     const cond: Condition = { type: "inFov", target: "self", observer: "player" };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
+    expect(fov.isVisible).toHaveBeenCalled();
+    expect(fov.isVisibleFrom).not.toHaveBeenCalled();
   });
 
-  it("inFov: Fovが不可視なら偽", () => {
+  it("inFov: observerがプレイヤーで不可視なら偽", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame({ fov: makeFov(false) });
     const self = makeActor(0, 0);
     const cond: Condition = { type: "inFov", target: "self", observer: "player" };
+    expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
+  });
+
+  it("inFov: observerが敵ならisVisibleFromで判定", () => {
+    const interp = new ScriptInterpreter();
+    const fov = makeFov(false, true);
+    const game = makeGame({ fov });
+    const self = makeActor(3, 3); // 敵（observer=self, target=player）
+    const cond: Condition = { type: "inFov", target: "player", observer: "self" };
+    expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
+    expect(fov.isVisible).not.toHaveBeenCalled();
+    expect(fov.isVisibleFrom).toHaveBeenCalled();
+  });
+
+  it("inFov: observerが敵で見通せなければ偽", () => {
+    const interp = new ScriptInterpreter();
+    const fov = makeFov(true, false);
+    const game = makeGame({ fov });
+    const self = makeActor(3, 3);
+    const cond: Condition = { type: "inFov", target: "player", observer: "self" };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
   });
 
@@ -325,6 +368,69 @@ describe("アクション: setStat", () => {
     const self = makeActor(0, 0, 10, 20, 5);
     interp.run(script([actionNode({ type: "setStat", target: "self", stat: "atk", value: lit(12) })]), { game, self });
     expect(self.attackPower).toBe(12);
+  });
+});
+
+describe("アクション: offerBagItem", () => {
+  it("effectScript付きアイテムはuseScriptとしてBagItemに渡される", () => {
+    const interp = new ScriptInterpreter();
+    const healScript: ScriptDefinition = {
+      id: "custom-heal", name: "custom heal", trigger: "itemEffect", variables: [],
+      body: [actionNode({ type: "heal", target: "player", amount: lit(99) })],
+    };
+    const game = makeGame({
+      config: {
+        items: [
+          {
+            id: "magic-herb",
+            name: "魔法の草",
+            char: "!",
+            color: "green",
+            effects: [{ effectId: "heal", params: { amount: 10 } }],
+            effectScript: healScript,
+          },
+        ],
+        fov: { radius: 8 },
+        messages: {
+          weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
+        },
+      },
+    } as unknown as Partial<Game>);
+    const self = makeActor(0, 0);
+    interp.run(script([actionNode({ type: "offerBagItem", itemId: "magic-herb" })]), { game, self });
+
+    expect(game.offerBagItem).toHaveBeenCalledOnce();
+    const bagItem = (game.offerBagItem as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(bagItem.name).toBe("魔法の草");
+    expect(bagItem.useScript).toBe(healScript);
+  });
+
+  it("effectScriptなしアイテムはuseScriptがundefined", () => {
+    const interp = new ScriptInterpreter();
+    const game = makeGame({
+      config: {
+        items: [
+          {
+            id: "potion",
+            name: "回復薬",
+            char: "!",
+            color: "red",
+            effects: [{ effectId: "heal", params: { amount: 20 } }],
+          },
+        ],
+        fov: { radius: 8 },
+        messages: {
+          weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
+        },
+      },
+    } as unknown as Partial<Game>);
+    const self = makeActor(0, 0);
+    interp.run(script([actionNode({ type: "offerBagItem", itemId: "potion" })]), { game, self });
+
+    expect(game.offerBagItem).toHaveBeenCalledOnce();
+    const bagItem = (game.offerBagItem as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(bagItem.name).toBe("回復薬");
+    expect(bagItem.useScript).toBeUndefined();
   });
 });
 
@@ -507,6 +613,83 @@ describe("変数スコープ", () => {
     // ローカルはrun内で初期化→加算→runの最後にclearLocalされる前の値
     // 実際にはclearLocalはrunの最初なので、次のrunで99に戻る
     expect(store.get("local", "local_var")).toBe(100);
+  });
+
+  it("entity変数は複数回のrunで初期値に戻らない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const enemy = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(1);
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(2);
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(3);
+  });
+
+  it("global変数は複数回のrunで初期値に戻らない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const self = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "total", scope: "global", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "global", name: "total", op: "+", value: lit(10) })],
+    };
+
+    interp.run(s, { game, self });
+    expect(store.get("global", "total")).toBe(10);
+
+    interp.run(s, { game, self });
+    expect(store.get("global", "total")).toBe(20);
+  });
+
+  it("local変数は毎回初期値に戻る", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const self = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "tmp", scope: "local", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "local", name: "tmp", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self });
+    interp.run(s, { game, self });
+    interp.run(s, { game, self });
+    // localは毎回0から+1なので常に1
+    expect(store.get("local", "tmp")).toBe(1);
+  });
+
+  it("別エンティティのentity変数は互いに影響しない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const enemy1 = makeActor(0, 0);
+    const enemy2 = makeActor(1, 1);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self: enemy1 });
+    interp.run(s, { game, self: enemy1 });
+    interp.run(s, { game, self: enemy2 });
+
+    expect(store.get("entity", "counter", enemy1.id)).toBe(2);
+    expect(store.get("entity", "counter", enemy2.id)).toBe(1);
   });
 
   it("エンティティ変数はエンティティ間で独立", () => {

@@ -103,6 +103,8 @@ export type RenderConfig = {
   gameOverOverlay: string;
   gameOverTitleColor: string;
   gameOverTextColor: string;
+  gameOverTitle: string;
+  gameOverText: string;
 };
 
 /** 視界（FOV）の設定。 */

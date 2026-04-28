@@ -154,6 +154,8 @@ export const sampleGameConfig: GameConfig = {
     gameOverOverlay: "rgba(0, 0, 0, 0.68)",
     gameOverTitleColor: "#ff8c7a",
     gameOverTextColor: "#e7e2d2",
+    gameOverTitle: "GAME OVER",
+    gameOverText: "Enterキーでリスタート",
   },
   fov: {
     radius: 8,

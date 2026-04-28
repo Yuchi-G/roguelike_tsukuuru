@@ -97,10 +97,10 @@ export class Renderer {
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.context.fillStyle = this.config.gameOverTitleColor;
     this.context.font = `48px ${this.config.fontFamily}`;
-    this.context.fillText("GAME OVER", this.canvas.width / 2, this.canvas.height / 2);
+    this.context.fillText(this.config.gameOverTitle, this.canvas.width / 2, this.canvas.height / 2);
     this.context.fillStyle = this.config.gameOverTextColor;
     this.context.font = `20px ${this.config.fontFamily}`;
-    this.context.fillText("Press Enter to restart", this.canvas.width / 2, this.canvas.height / 2 + 44);
+    this.context.fillText(this.config.gameOverText, this.canvas.width / 2, this.canvas.height / 2 + 44);
     this.setBaseFont();
   }
 

@@ -48,6 +48,19 @@ export class VariableStore {
     }
   }
 
+  has(scope: VariableScope, name: string, entityId?: string): boolean {
+    switch (scope) {
+      case "global":
+        return this.global.has(name);
+      case "entity": {
+        const id = entityId ?? "";
+        return this.entity.get(id)?.has(name) ?? false;
+      }
+      case "local":
+        return this.local.has(name);
+    }
+  }
+
   set(scope: VariableScope, name: string, value: ScriptValue, entityId?: string): void {
     switch (scope) {
       case "global":
@@ -108,7 +121,9 @@ export class ScriptInterpreter {
     this.variables.clearLocal();
 
     for (const variable of script.variables) {
-      this.variables.set(variable.scope, variable.name, variable.initialValue, context.self.id);
+      if (variable.scope === "local" || !this.variables.has(variable.scope, variable.name, context.self.id)) {
+        this.variables.set(variable.scope, variable.name, variable.initialValue, context.self.id);
+      }
     }
 
     this.executeNodes(script.body, context);
@@ -227,7 +242,11 @@ export class ScriptInterpreter {
         const observed = this.resolveTarget(condition.target, context);
         const observer = this.resolveTarget(condition.observer, context);
         if (!observed || !observer) return false;
-        return context.game.fov.isVisible(observed.x, observed.y);
+        if (observer.id === context.game.player.id) {
+          return context.game.fov.isVisible(observed.x, observed.y);
+        }
+        const radius = context.game.config.fov.radius;
+        return context.game.fov.isVisibleFrom(context.game.map, observer.x, observer.y, observed.x, observed.y, radius);
       }
 
       case "random": {
@@ -324,6 +343,7 @@ export class ScriptInterpreter {
             effectId: effect?.effectId ?? "",
             params: effect?.params ?? {},
             description: effect?.effectId === "equipWeapon" ? `ATK +${paramValue}` : `HP +${paramValue}`,
+            useScript: itemDef.effectScript,
           });
         }
         return;

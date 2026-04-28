@@ -150,6 +150,8 @@ export class ConfigPanel {
       this.colorInput("探索済み文字", "render.exploredColor", this.config.render.exploredColor),
       this.colorInput("探索済み背景", "render.exploredBackground", this.config.render.exploredBackground),
       this.colorInput("GAME OVER文字", "render.gameOverTitleColor", this.config.render.gameOverTitleColor),
+      this.textInput("GAME OVERタイトル", "render.gameOverTitle", this.config.render.gameOverTitle),
+      this.textInput("GAME OVER説明文", "render.gameOverText", this.config.render.gameOverText),
       "</fieldset>",
     ].join("");
   }
@@ -453,6 +455,8 @@ export class ConfigPanel {
     this.config.render.exploredColor = this.stringValue(formData, "render.exploredColor", this.config.render.exploredColor);
     this.config.render.exploredBackground = this.stringValue(formData, "render.exploredBackground", this.config.render.exploredBackground);
     this.config.render.gameOverTitleColor = this.stringValue(formData, "render.gameOverTitleColor", this.config.render.gameOverTitleColor);
+    this.config.render.gameOverTitle = this.stringValue(formData, "render.gameOverTitle", this.config.render.gameOverTitle);
+    this.config.render.gameOverText = this.stringValue(formData, "render.gameOverText", this.config.render.gameOverText);
   }
 
   private applyEnemies(formData: FormData): void {

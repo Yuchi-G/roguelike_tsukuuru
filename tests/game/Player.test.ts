@@ -51,16 +51,16 @@ describe("Player.getAttack()", () => {
 describe("Player.addItem()", () => {
   it("バッグに追加してtrueを返す", () => {
     const player = makePlayer();
-    const result = player.addItem(makeBagItem());
-    expect(result).toBe(true);
+    const wasAddedToBag = player.addItem(makeBagItem());
+    expect(wasAddedToBag).toBe(true);
     expect(player.itemBag).toHaveLength(1);
   });
 
   it("バッグが満杯のときfalseを返してアイテムを追加しない", () => {
     const player = makePlayer({ maxBagItems: 1 });
     player.addItem(makeBagItem("A"));
-    const result = player.addItem(makeBagItem("B"));
-    expect(result).toBe(false);
+    const wasAddedToBag = player.addItem(makeBagItem("B"));
+    expect(wasAddedToBag).toBe(false);
     expect(player.itemBag).toHaveLength(1);
   });
 });
@@ -69,8 +69,8 @@ describe("Player.replaceItemAt()", () => {
   it("指定インデックスのアイテムを交換して古いアイテムを返す", () => {
     const player = makePlayer();
     player.addItem(makeBagItem("古いアイテム"));
-    const dropped = player.replaceItemAt(0, makeBagItem("新しいアイテム"));
-    expect(dropped?.name).toBe("古いアイテム");
+    const droppedBagItem = player.replaceItemAt(0, makeBagItem("新しいアイテム"));
+    expect(droppedBagItem?.name).toBe("古いアイテム");
     expect(player.itemBag[0].name).toBe("新しいアイテム");
   });
 
@@ -86,8 +86,8 @@ describe("Player.takeBagItemAt()", () => {
     const player = makePlayer();
     player.addItem(makeBagItem("A"));
     player.addItem(makeBagItem("B"));
-    const item = player.takeBagItemAt(0);
-    expect(item?.name).toBe("A");
+    const removedBagItem = player.takeBagItemAt(0);
+    expect(removedBagItem?.name).toBe("A");
     expect(player.itemBag).toHaveLength(1);
     expect(player.itemBag[0].name).toBe("B");
   });
@@ -102,23 +102,23 @@ describe("Player.takeBagItemAt()", () => {
 describe("Player.checkLevelUp()", () => {
   it("経験値が足りなければレベルアップしない", () => {
     const player = makePlayer({ exp: 5, nextLevelExp: 10, level: 1 });
-    const levelUps = player.checkLevelUp(1.5, 5, 2);
-    expect(levelUps).toBe(0);
+    const completedLevelUps = player.checkLevelUp(1.5, 5, 2);
+    expect(completedLevelUps).toBe(0);
     expect(player.level).toBe(1);
   });
 
   it("経験値が足りればレベルアップする", () => {
     const player = makePlayer({ exp: 10, nextLevelExp: 10, level: 1 });
-    const levelUps = player.checkLevelUp(1.5, 5, 2);
-    expect(levelUps).toBe(1);
+    const completedLevelUps = player.checkLevelUp(1.5, 5, 2);
+    expect(completedLevelUps).toBe(1);
     expect(player.level).toBe(2);
   });
 
   it("レベルアップ時に最大HPが増えHPが全回復する", () => {
     const player = makePlayer({ hp: 15, exp: 10, nextLevelExp: 10 });
-    const prevMaxHp = player.maxHp; // 20
+    const maxHpBeforeLevelUp = player.maxHp; // 20
     player.checkLevelUp(1.5, 10, 0);
-    expect(player.maxHp).toBe(prevMaxHp + 10);
+    expect(player.maxHp).toBe(maxHpBeforeLevelUp + 10);
     expect(player.hp).toBe(player.maxHp);
   });
 
@@ -131,8 +131,8 @@ describe("Player.checkLevelUp()", () => {
   it("余剰経験値で連続レベルアップする", () => {
     // nextLevelExp=5、exp=12 → 2回レベルアップ (5消費→残7、次のnext=floor(5*1.5)=7→7消費)
     const player = makePlayer({ exp: 12, nextLevelExp: 5, level: 1 });
-    const levelUps = player.checkLevelUp(1.5, 0, 0);
-    expect(levelUps).toBe(2);
+    const completedLevelUps = player.checkLevelUp(1.5, 0, 0);
+    expect(completedLevelUps).toBe(2);
     expect(player.level).toBe(3);
   });
 

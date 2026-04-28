@@ -9,20 +9,20 @@ class TestEntity extends Entity {
 
 describe("getBlockingEntityAt()", () => {
   it("指定座標に移動ブロックエンティティがいれば返す", () => {
-    const blocker = new TestEntity(3, 4, "X", "red", true);
-    const result = getBlockingEntityAt([blocker], 3, 4);
-    expect(result).toBe(blocker);
+    const blockingEntity = new TestEntity(3, 4, "X", "red", true);
+    const foundBlockingEntity = getBlockingEntityAt([blockingEntity], 3, 4);
+    expect(foundBlockingEntity).toBe(blockingEntity);
   });
 
   it("エンティティがいなければundefinedを返す", () => {
-    const result = getBlockingEntityAt([], 0, 0);
-    expect(result).toBeUndefined();
+    const foundBlockingEntity = getBlockingEntityAt([], 0, 0);
+    expect(foundBlockingEntity).toBeUndefined();
   });
 
   it("座標が合わなければundefinedを返す", () => {
-    const blocker = new TestEntity(1, 1, "X", "red", true);
-    expect(getBlockingEntityAt([blocker], 2, 1)).toBeUndefined();
-    expect(getBlockingEntityAt([blocker], 1, 2)).toBeUndefined();
+    const blockingEntity = new TestEntity(1, 1, "X", "red", true);
+    expect(getBlockingEntityAt([blockingEntity], 2, 1)).toBeUndefined();
+    expect(getBlockingEntityAt([blockingEntity], 1, 2)).toBeUndefined();
   });
 
   it("blocksMovementがfalseのエンティティは返さない", () => {
@@ -31,8 +31,8 @@ describe("getBlockingEntityAt()", () => {
   });
 
   it("複数エンティティから正しいものを選ぶ", () => {
-    const a = new TestEntity(1, 0, "A", "red", true);
-    const b = new TestEntity(0, 1, "B", "blue", true);
-    expect(getBlockingEntityAt([a, b], 0, 1)).toBe(b);
+    const firstBlockingEntity = new TestEntity(1, 0, "A", "red", true);
+    const secondBlockingEntity = new TestEntity(0, 1, "B", "blue", true);
+    expect(getBlockingEntityAt([firstBlockingEntity, secondBlockingEntity], 0, 1)).toBe(secondBlockingEntity);
   });
 });

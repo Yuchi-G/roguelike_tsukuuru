@@ -31,57 +31,57 @@ export type ScriptContext = {
 
 /** 変数ストア。スコープごとに分離する。 */
 export class VariableStore {
-  private global = new Map<string, ScriptValue>();
-  private entity = new Map<string, Map<string, ScriptValue>>();
-  private local = new Map<string, ScriptValue>();
+  private globalVariables = new Map<string, ScriptValue>();
+  private entityVariablesByEntityId = new Map<string, Map<string, ScriptValue>>();
+  private localVariables = new Map<string, ScriptValue>();
 
-  get(scope: VariableScope, name: string, entityId?: string): ScriptValue {
+  get(scope: VariableScope, variableName: string, entityId?: string): ScriptValue {
     switch (scope) {
       case "global":
-        return this.global.get(name) ?? 0;
+        return this.globalVariables.get(variableName) ?? 0;
       case "entity": {
-        const id = entityId ?? "";
-        return this.entity.get(id)?.get(name) ?? 0;
+        const resolvedEntityId = entityId ?? "";
+        return this.entityVariablesByEntityId.get(resolvedEntityId)?.get(variableName) ?? 0;
       }
       case "local":
-        return this.local.get(name) ?? 0;
+        return this.localVariables.get(variableName) ?? 0;
     }
   }
 
-  has(scope: VariableScope, name: string, entityId?: string): boolean {
+  has(scope: VariableScope, variableName: string, entityId?: string): boolean {
     switch (scope) {
       case "global":
-        return this.global.has(name);
+        return this.globalVariables.has(variableName);
       case "entity": {
-        const id = entityId ?? "";
-        return this.entity.get(id)?.has(name) ?? false;
+        const resolvedEntityId = entityId ?? "";
+        return this.entityVariablesByEntityId.get(resolvedEntityId)?.has(variableName) ?? false;
       }
       case "local":
-        return this.local.has(name);
+        return this.localVariables.has(variableName);
     }
   }
 
-  set(scope: VariableScope, name: string, value: ScriptValue, entityId?: string): void {
+  set(scope: VariableScope, variableName: string, variableValue: ScriptValue, entityId?: string): void {
     switch (scope) {
       case "global":
-        this.global.set(name, value);
+        this.globalVariables.set(variableName, variableValue);
         break;
       case "entity": {
-        const id = entityId ?? "";
-        if (!this.entity.has(id)) {
-          this.entity.set(id, new Map());
+        const resolvedEntityId = entityId ?? "";
+        if (!this.entityVariablesByEntityId.has(resolvedEntityId)) {
+          this.entityVariablesByEntityId.set(resolvedEntityId, new Map());
         }
-        this.entity.get(id)!.set(name, value);
+        this.entityVariablesByEntityId.get(resolvedEntityId)!.set(variableName, variableValue);
         break;
       }
       case "local":
-        this.local.set(name, value);
+        this.localVariables.set(variableName, variableValue);
         break;
     }
   }
 
   clearLocal(): void {
-    this.local.clear();
+    this.localVariables.clear();
   }
 }
 
@@ -94,7 +94,7 @@ class BreakSignal {
 
 /** WAIT文で実行を中断するシグナル（将来のターン待機用）。 */
 class WaitSignal {
-  constructor(readonly turns: number) {}
+  constructor(readonly waitTurns: number) {}
 }
 
 // ========================== 無限ループ防止 ==========================
@@ -120,9 +120,17 @@ export class ScriptInterpreter {
     this.nodeExecutions = 0;
     this.variables.clearLocal();
 
-    for (const variable of script.variables) {
-      if (variable.scope === "local" || !this.variables.has(variable.scope, variable.name, context.self.id)) {
-        this.variables.set(variable.scope, variable.name, variable.initialValue, context.self.id);
+    for (const scriptVariableDefinition of script.variables) {
+      if (
+        scriptVariableDefinition.scope === "local" ||
+        !this.variables.has(scriptVariableDefinition.scope, scriptVariableDefinition.name, context.self.id)
+      ) {
+        this.variables.set(
+          scriptVariableDefinition.scope,
+          scriptVariableDefinition.name,
+          scriptVariableDefinition.initialValue,
+          context.self.id,
+        );
       }
     }
 
@@ -133,51 +141,51 @@ export class ScriptInterpreter {
 
   private nodeExecutions = 0;
 
-  private executeNodes(nodes: ScriptNode[], context: ScriptContext): void {
-    for (const node of nodes) {
+  private executeNodes(scriptNodes: ScriptNode[], context: ScriptContext): void {
+    for (const scriptNode of scriptNodes) {
       this.nodeExecutions += 1;
       if (this.nodeExecutions > MAX_NODE_EXECUTIONS) {
         return;
       }
-      const signal = this.executeNode(node, context);
-      if (signal instanceof BreakSignal || signal instanceof WaitSignal) {
+      const controlSignal = this.executeNode(scriptNode, context);
+      if (controlSignal instanceof BreakSignal || controlSignal instanceof WaitSignal) {
         return;
       }
     }
   }
 
-  private executeNode(node: ScriptNode, context: ScriptContext): BreakSignal | WaitSignal | void {
-    switch (node.type) {
+  private executeNode(scriptNode: ScriptNode, context: ScriptContext): BreakSignal | WaitSignal | void {
+    switch (scriptNode.type) {
       case "action":
-        return this.executeAction(node.action, context);
+        return this.executeAction(scriptNode.action, context);
 
       case "if": {
-        if (this.evaluateCondition(node.condition, context)) {
-          return this.executeBlock(node.then, context);
-        } else if (node.else) {
-          return this.executeBlock(node.else, context);
+        if (this.evaluateCondition(scriptNode.condition, context)) {
+          return this.executeBlock(scriptNode.then, context);
+        } else if (scriptNode.else) {
+          return this.executeBlock(scriptNode.else, context);
         }
         return;
       }
 
       case "loop": {
-        const count = this.toNumber(this.resolveValue(node.count, context));
-        const iterations = Math.min(count, MAX_ITERATIONS);
-        for (let i = 0; i < iterations; i += 1) {
-          const signal = this.executeBlock(node.body, context);
-          if (signal instanceof BreakSignal) return;
-          if (signal instanceof WaitSignal) return signal;
+        const loopCount = this.toNumber(this.resolveValue(scriptNode.count, context));
+        const iterationLimit = Math.min(loopCount, MAX_ITERATIONS);
+        for (let iterationIndex = 0; iterationIndex < iterationLimit; iterationIndex += 1) {
+          const controlSignal = this.executeBlock(scriptNode.body, context);
+          if (controlSignal instanceof BreakSignal) return;
+          if (controlSignal instanceof WaitSignal) return controlSignal;
         }
         return;
       }
 
       case "while": {
-        let iterations = 0;
-        while (this.evaluateCondition(node.condition, context) && iterations < MAX_ITERATIONS) {
-          iterations += 1;
-          const signal = this.executeBlock(node.body, context);
-          if (signal instanceof BreakSignal) return;
-          if (signal instanceof WaitSignal) return signal;
+        let iterationCount = 0;
+        while (this.evaluateCondition(scriptNode.condition, context) && iterationCount < MAX_ITERATIONS) {
+          iterationCount += 1;
+          const controlSignal = this.executeBlock(scriptNode.body, context);
+          if (controlSignal instanceof BreakSignal) return;
+          if (controlSignal instanceof WaitSignal) return controlSignal;
         }
         return;
       }
@@ -187,14 +195,14 @@ export class ScriptInterpreter {
     }
   }
 
-  private executeBlock(nodes: ScriptNode[], context: ScriptContext): BreakSignal | WaitSignal | void {
-    for (const node of nodes) {
+  private executeBlock(scriptNodes: ScriptNode[], context: ScriptContext): BreakSignal | WaitSignal | void {
+    for (const scriptNode of scriptNodes) {
       this.nodeExecutions += 1;
       if (this.nodeExecutions > MAX_NODE_EXECUTIONS) {
         return;
       }
-      const signal = this.executeNode(node, context);
-      if (signal) return signal;
+      const controlSignal = this.executeNode(scriptNode, context);
+      if (controlSignal) return controlSignal;
     }
   }
 
@@ -209,20 +217,20 @@ export class ScriptInterpreter {
       }
 
       case "and":
-        return condition.conditions.every((c) => this.evaluateCondition(c, context));
+        return condition.conditions.every((childCondition) => this.evaluateCondition(childCondition, context));
 
       case "or":
-        return condition.conditions.some((c) => this.evaluateCondition(c, context));
+        return condition.conditions.some((childCondition) => this.evaluateCondition(childCondition, context));
 
       case "not":
         return !this.evaluateCondition(condition.condition, context);
 
       case "hasItem": {
-        const actor = this.resolveTarget(condition.target, context);
-        if (!actor) return false;
-        const player = this.asPlayer(actor, context);
+        const targetActor = this.resolveTarget(condition.target, context);
+        if (!targetActor) return false;
+        const player = this.asPlayer(targetActor, context);
         if (!player) return false;
-        return player.itemBag.some((item) => item.effectId === condition.itemId || item.name === condition.itemId);
+        return player.itemBag.some((bagItem) => bagItem.effectId === condition.itemId || bagItem.name === condition.itemId);
       }
 
       case "hasStatus":
@@ -230,28 +238,35 @@ export class ScriptInterpreter {
         return false;
 
       case "inRange": {
-        const a = this.resolveTarget(condition.target, context);
-        const b = this.resolveTarget(condition.from, context);
-        if (!a || !b) return false;
-        const dist = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-        const maxDist = this.toNumber(this.resolveValue(condition.distance, context));
-        return dist <= maxDist;
+        const targetActor = this.resolveTarget(condition.target, context);
+        const originActor = this.resolveTarget(condition.from, context);
+        if (!targetActor || !originActor) return false;
+        const manhattanDistance = Math.abs(targetActor.x - originActor.x) + Math.abs(targetActor.y - originActor.y);
+        const maxDistance = this.toNumber(this.resolveValue(condition.distance, context));
+        return manhattanDistance <= maxDistance;
       }
 
       case "inFov": {
-        const observed = this.resolveTarget(condition.target, context);
-        const observer = this.resolveTarget(condition.observer, context);
-        if (!observed || !observer) return false;
-        if (observer.id === context.game.player.id) {
-          return context.game.fov.isVisible(observed.x, observed.y);
+        const observedActor = this.resolveTarget(condition.target, context);
+        const observerActor = this.resolveTarget(condition.observer, context);
+        if (!observedActor || !observerActor) return false;
+        if (observerActor.id === context.game.player.id) {
+          return context.game.fov.isVisible(observedActor.x, observedActor.y);
         }
-        const radius = context.game.config.fov.radius;
-        return context.game.fov.isVisibleFrom(context.game.map, observer.x, observer.y, observed.x, observed.y, radius);
+        const visionRadius = context.game.config.fov.radius;
+        return context.game.fov.isVisibleFrom(
+          context.game.map,
+          observerActor.x,
+          observerActor.y,
+          observedActor.x,
+          observedActor.y,
+          visionRadius,
+        );
       }
 
       case "random": {
-        const percent = this.toNumber(this.resolveValue(condition.percent, context));
-        return Math.random() * 100 < percent;
+        const percentChance = this.toNumber(this.resolveValue(condition.percent, context));
+        return Math.random() * 100 < percentChance;
       }
 
       case "true":
@@ -271,10 +286,10 @@ export class ScriptInterpreter {
         return;
 
       case "attack": {
-        const attacker = this.resolveTarget(action.attacker, context);
-        const defender = this.resolveTarget(action.defender, context);
-        if (attacker && defender) {
-          context.game.attack(attacker, defender);
+        const attackerActor = this.resolveTarget(action.attacker, context);
+        const defenderActor = this.resolveTarget(action.defender, context);
+        if (attackerActor && defenderActor) {
+          context.game.attack(attackerActor, defenderActor);
         }
         return;
       }
@@ -284,19 +299,19 @@ export class ScriptInterpreter {
         return;
 
       case "damage": {
-        const target = this.resolveTarget(action.target, context);
-        if (target) {
-          const amount = this.toNumber(this.resolveValue(action.amount, context));
-          target.damage(amount);
+        const targetActor = this.resolveTarget(action.target, context);
+        if (targetActor) {
+          const damageAmount = this.toNumber(this.resolveValue(action.amount, context));
+          targetActor.damage(damageAmount);
         }
         return;
       }
 
       case "heal": {
-        const target = this.resolveTarget(action.target, context);
-        if (target) {
-          const amount = this.toNumber(this.resolveValue(action.amount, context));
-          target.heal(amount);
+        const targetActor = this.resolveTarget(action.target, context);
+        if (targetActor) {
+          const healAmount = this.toNumber(this.resolveValue(action.amount, context));
+          targetActor.heal(healAmount);
         }
         return;
       }
@@ -310,62 +325,64 @@ export class ScriptInterpreter {
         return;
 
       case "setStat": {
-        const target = this.resolveTarget(action.target, context);
-        if (target) {
-          const value = this.toNumber(this.resolveValue(action.value, context));
-          this.setStatValue(target, action.stat, value, context);
+        const targetActor = this.resolveTarget(action.target, context);
+        if (targetActor) {
+          const statValue = this.toNumber(this.resolveValue(action.value, context));
+          this.setStatValue(targetActor, action.stat, statValue, context);
         }
         return;
       }
 
       case "setVariable": {
-        const value = this.resolveValue(action.value, context);
-        this.variables.set(action.scope, action.name, value, context.self.id);
+        const variableValue = this.resolveValue(action.value, context);
+        this.variables.set(action.scope, action.name, variableValue, context.self.id);
         return;
       }
 
       case "addVariable": {
-        const current = this.variables.get(action.scope, action.name, context.self.id);
-        const operand = this.resolveValue(action.value, context);
-        const result = this.applyArithmetic(current, action.op, operand);
-        this.variables.set(action.scope, action.name, result, context.self.id);
+        const currentVariableValue = this.variables.get(action.scope, action.name, context.self.id);
+        const arithmeticOperand = this.resolveValue(action.value, context);
+        const updatedVariableValue = this.applyArithmetic(currentVariableValue, action.op, arithmeticOperand);
+        this.variables.set(action.scope, action.name, updatedVariableValue, context.self.id);
         return;
       }
 
       case "offerBagItem": {
         // アイテムIDからアイテム定義を取得してofferBagItemを呼ぶ。
-        const itemDef = context.game.config.items.find((i) => i.id === action.itemId);
-        if (itemDef) {
-          const effect = itemDef.effects[0];
-          const paramValue = effect ? this.effectParamValue(effect.effectId, effect.params) : 0;
+        const itemDefinition = context.game.config.items.find((itemDefinitionCandidate) => itemDefinitionCandidate.id === action.itemId);
+        if (itemDefinition) {
+          const primaryEffectDefinition = itemDefinition.effects[0];
+          const primaryEffectAmount = primaryEffectDefinition
+            ? this.effectParamValue(primaryEffectDefinition.effectId, primaryEffectDefinition.params)
+            : 0;
           context.game.offerBagItem({
-            name: itemDef.name,
-            effectId: effect?.effectId ?? "",
-            params: effect?.params ?? {},
-            description: effect?.effectId === "equipWeapon" ? `ATK +${paramValue}` : `HP +${paramValue}`,
-            useScript: itemDef.effectScript,
+            name: itemDefinition.name,
+            effectId: primaryEffectDefinition?.effectId ?? "",
+            params: primaryEffectDefinition?.params ?? {},
+            description: primaryEffectDefinition?.effectId === "equipWeapon" ? `ATK +${primaryEffectAmount}` : `HP +${primaryEffectAmount}`,
+            useScript: itemDefinition.effectScript,
           });
         }
         return;
       }
 
       case "equipWeapon": {
-        const target = this.resolveTarget(action.target, context);
-        const player = target ? this.asPlayer(target, context) : null;
+        const targetActor = this.resolveTarget(action.target, context);
+        const player = targetActor ? this.asPlayer(targetActor, context) : null;
         if (player) {
           const itemName = String(this.resolveValue(action.itemName, context));
-          const atk = this.toNumber(this.resolveValue(action.atk, context));
+          const weaponAttackBonus = this.toNumber(this.resolveValue(action.atk, context));
           if (player.weapon !== null) {
-            const oldWeapon = player.weapon;
+            const equippedWeapon = player.weapon;
             player.addItem({
-              name: oldWeapon.name,
+              name: equippedWeapon.name,
               effectId: "equipWeapon",
-              params: { atk: oldWeapon.atk },
-              description: `ATK +${oldWeapon.atk}`,
+              params: { atk: equippedWeapon.atk },
+              description: `ATK +${equippedWeapon.atk}`,
             });
           }
-          player.weapon = { name: itemName, atk };
-          context.game.logger.add(context.game.config.messages.weaponEquipped(itemName, atk));
+          player.weapon = { name: itemName, atk: weaponAttackBonus };
+          context.game.logger.add(context.game.config.messages.weaponEquipped(itemName, weaponAttackBonus));
         }
         return;
       }
@@ -379,22 +396,22 @@ export class ScriptInterpreter {
         return;
 
       case "log": {
-        const message = action.message.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => {
-          const ref = action.params[key];
-          if (!ref) return match;
-          return String(this.resolveValue(ref, context));
+        const message = action.message.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, placeholderName: string) => {
+          const valueReference = action.params[placeholderName];
+          if (!valueReference) return match;
+          return String(this.resolveValue(valueReference, context));
         });
         context.game.logger.add(message);
         return;
       }
 
       case "wait": {
-        const turns = this.toNumber(this.resolveValue(action.turns, context));
-        return new WaitSignal(turns);
+        const waitTurns = this.toNumber(this.resolveValue(action.turns, context));
+        return new WaitSignal(waitTurns);
       }
 
       case "endGame":
-        context.game.endGame();
+        context.game.triggerGameOver();
         return;
 
       case "doNothing":
@@ -405,100 +422,100 @@ export class ScriptInterpreter {
   // ========================== 移動 ==========================
 
   private executeMove(actorRef: ScriptTarget, mode: MoveMode, context: ScriptContext): void {
-    const actor = this.resolveTarget(actorRef, context);
-    if (!actor) return;
+    const movingActor = this.resolveTarget(actorRef, context);
+    if (!movingActor) return;
 
     switch (mode.type) {
       case "toward": {
-        const target = this.resolveTarget(mode.target, context);
-        if (!target) return;
-        this.moveToward(actor, target, context);
+        const targetActor = this.resolveTarget(mode.target, context);
+        if (!targetActor) return;
+        this.moveToward(movingActor, targetActor, context);
         return;
       }
 
       case "away": {
-        const target = this.resolveTarget(mode.target, context);
-        if (!target) return;
-        this.moveAway(actor, target, context);
+        const targetActor = this.resolveTarget(mode.target, context);
+        if (!targetActor) return;
+        this.moveAway(movingActor, targetActor, context);
         return;
       }
 
       case "random": {
-        const directions = [
+        const cardinalDirections = [
           { dx: 0, dy: -1 },
           { dx: 0, dy: 1 },
           { dx: -1, dy: 0 },
           { dx: 1, dy: 0 },
         ];
-        const direction = directions[Math.floor(Math.random() * directions.length)];
-        context.game.tryMoveActor(actor, direction.dx, direction.dy);
+        const selectedDirection = cardinalDirections[Math.floor(Math.random() * cardinalDirections.length)];
+        context.game.tryMoveActorByDelta(movingActor, selectedDirection.dx, selectedDirection.dy);
         return;
       }
 
       case "direction":
-        context.game.tryMoveActor(actor, mode.dx, mode.dy);
+        context.game.tryMoveActorByDelta(movingActor, mode.dx, mode.dy);
         return;
     }
   }
 
   /** 対象に1歩近づく。隣接なら攻撃しない（攻撃はattackアクションで明示的に行う）。 */
-  private moveToward(actor: Actor, target: Actor, context: ScriptContext): void {
-    const dx = target.x - actor.x;
-    const dy = target.y - actor.y;
-    const stepX = Math.sign(dx);
-    const stepY = Math.sign(dy);
+  private moveToward(movingActor: Actor, targetActor: Actor, context: ScriptContext): void {
+    const deltaToTargetX = targetActor.x - movingActor.x;
+    const deltaToTargetY = targetActor.y - movingActor.y;
+    const stepX = Math.sign(deltaToTargetX);
+    const stepY = Math.sign(deltaToTargetY);
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (!context.game.tryMoveActor(actor, stepX, 0)) {
-        context.game.tryMoveActor(actor, 0, stepY);
+    if (Math.abs(deltaToTargetX) > Math.abs(deltaToTargetY)) {
+      if (!context.game.tryMoveActorByDelta(movingActor, stepX, 0)) {
+        context.game.tryMoveActorByDelta(movingActor, 0, stepY);
       }
     } else {
-      if (!context.game.tryMoveActor(actor, 0, stepY)) {
-        context.game.tryMoveActor(actor, stepX, 0);
+      if (!context.game.tryMoveActorByDelta(movingActor, 0, stepY)) {
+        context.game.tryMoveActorByDelta(movingActor, stepX, 0);
       }
     }
   }
 
   /** 対象から1歩逃げる。 */
-  private moveAway(actor: Actor, target: Actor, context: ScriptContext): void {
-    const dx = actor.x - target.x;
-    const dy = actor.y - target.y;
-    const stepX = Math.sign(dx);
-    const stepY = Math.sign(dy);
+  private moveAway(movingActor: Actor, targetActor: Actor, context: ScriptContext): void {
+    const deltaAwayFromTargetX = movingActor.x - targetActor.x;
+    const deltaAwayFromTargetY = movingActor.y - targetActor.y;
+    const stepX = Math.sign(deltaAwayFromTargetX);
+    const stepY = Math.sign(deltaAwayFromTargetY);
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (!context.game.tryMoveActor(actor, stepX, 0)) {
-        context.game.tryMoveActor(actor, 0, stepY);
+    if (Math.abs(deltaAwayFromTargetX) > Math.abs(deltaAwayFromTargetY)) {
+      if (!context.game.tryMoveActorByDelta(movingActor, stepX, 0)) {
+        context.game.tryMoveActorByDelta(movingActor, 0, stepY);
       }
     } else {
-      if (!context.game.tryMoveActor(actor, 0, stepY)) {
-        context.game.tryMoveActor(actor, stepX, 0);
+      if (!context.game.tryMoveActorByDelta(movingActor, 0, stepY)) {
+        context.game.tryMoveActorByDelta(movingActor, stepX, 0);
       }
     }
   }
 
   // ========================== 値の解決 ==========================
 
-  resolveValue(ref: ValueRef, context: ScriptContext): ScriptValue {
-    switch (ref.type) {
+  resolveValue(valueReference: ValueRef, context: ScriptContext): ScriptValue {
+    switch (valueReference.type) {
       case "literal":
-        return ref.value;
+        return valueReference.value;
 
       case "variable":
-        return this.variables.get(ref.scope, ref.name, context.self.id);
+        return this.variables.get(valueReference.scope, valueReference.name, context.self.id);
 
       case "stat": {
-        const actor = this.resolveTarget(ref.target, context);
-        if (!actor) return 0;
-        return this.getStatValue(actor, ref.stat, context);
+        const targetActor = this.resolveTarget(valueReference.target, context);
+        if (!targetActor) return 0;
+        return this.getStatValue(targetActor, valueReference.stat, context);
       }
     }
   }
 
   // ========================== ターゲット解決 ==========================
 
-  resolveTarget(target: ScriptTarget, context: ScriptContext): Actor | null {
-    switch (target) {
+  resolveTarget(targetReference: ScriptTarget, context: ScriptContext): Actor | null {
+    switch (targetReference) {
       case "self":
         return context.self;
       case "player":
@@ -548,26 +565,26 @@ export class ScriptInterpreter {
     }
   }
 
-  private setStatValue(actor: Actor, stat: StatKey, value: number, context: ScriptContext): void {
+  private setStatValue(actor: Actor, stat: StatKey, statValue: number, context: ScriptContext): void {
     switch (stat) {
       case "hp":
-        actor.hp = Math.max(0, Math.min(actor.maxHp, Math.round(value)));
+        actor.hp = Math.max(0, Math.min(actor.maxHp, Math.round(statValue)));
         break;
       case "maxHp":
-        actor.maxHp = Math.max(1, Math.round(value));
+        actor.maxHp = Math.max(1, Math.round(statValue));
         actor.hp = Math.min(actor.hp, actor.maxHp);
         break;
       case "atk":
-        actor.attackPower = Math.max(0, Math.round(value));
+        actor.attackPower = Math.max(0, Math.round(statValue));
         break;
       case "level": {
         const player = this.asPlayer(actor, context);
-        if (player) player.level = Math.max(1, Math.round(value));
+        if (player) player.level = Math.max(1, Math.round(statValue));
         break;
       }
       case "exp": {
         const player = this.asPlayer(actor, context);
-        if (player) player.exp = Math.max(0, Math.round(value));
+        if (player) player.exp = Math.max(0, Math.round(statValue));
         break;
       }
       // 読み取り専用または未実装のステータスは何もしない
@@ -578,37 +595,37 @@ export class ScriptInterpreter {
 
   // ========================== ユーティリティ ==========================
 
-  private compare(left: ScriptValue, op: string, right: ScriptValue): boolean {
-    const l = typeof left === "number" ? left : String(left);
-    const r = typeof right === "number" ? right : String(right);
+  private compare(leftValue: ScriptValue, op: string, rightValue: ScriptValue): boolean {
+    const comparableLeftValue = typeof leftValue === "number" ? leftValue : String(leftValue);
+    const comparableRightValue = typeof rightValue === "number" ? rightValue : String(rightValue);
     switch (op) {
-      case "==": return l === r;
-      case "!=": return l !== r;
-      case "<":  return l < r;
-      case "<=": return l <= r;
-      case ">":  return l > r;
-      case ">=": return l >= r;
+      case "==": return comparableLeftValue === comparableRightValue;
+      case "!=": return comparableLeftValue !== comparableRightValue;
+      case "<":  return comparableLeftValue < comparableRightValue;
+      case "<=": return comparableLeftValue <= comparableRightValue;
+      case ">":  return comparableLeftValue > comparableRightValue;
+      case ">=": return comparableLeftValue >= comparableRightValue;
       default: return false;
     }
   }
 
-  private applyArithmetic(current: ScriptValue, op: ArithmeticOp, operand: ScriptValue): ScriptValue {
-    const a = this.toNumber(current);
-    const b = this.toNumber(operand);
+  private applyArithmetic(currentValue: ScriptValue, op: ArithmeticOp, operandValue: ScriptValue): ScriptValue {
+    const currentNumber = this.toNumber(currentValue);
+    const operandNumber = this.toNumber(operandValue);
     switch (op) {
-      case "+": return a + b;
-      case "-": return a - b;
-      case "*": return a * b;
-      case "/": return b !== 0 ? a / b : 0;
-      case "%": return b !== 0 ? a % b : 0;
+      case "+": return currentNumber + operandNumber;
+      case "-": return currentNumber - operandNumber;
+      case "*": return currentNumber * operandNumber;
+      case "/": return operandNumber !== 0 ? currentNumber / operandNumber : 0;
+      case "%": return operandNumber !== 0 ? currentNumber % operandNumber : 0;
     }
   }
 
-  private toNumber(value: ScriptValue): number {
-    if (typeof value === "number") return value;
-    if (typeof value === "boolean") return value ? 1 : 0;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+  private toNumber(scriptValue: ScriptValue): number {
+    if (typeof scriptValue === "number") return scriptValue;
+    if (typeof scriptValue === "boolean") return scriptValue ? 1 : 0;
+    const parsedNumber = Number(scriptValue);
+    return Number.isFinite(parsedNumber) ? parsedNumber : 0;
   }
 
   private asPlayer(actor: Actor, context: ScriptContext): import("../../game/Player").Player | null {
@@ -616,8 +633,8 @@ export class ScriptInterpreter {
   }
 
   private effectParamValue(effectId: string, params: Record<string, number | string | boolean>): number {
-    const key = effectId === "equipWeapon" ? "atk" : "amount";
-    const value = params[key];
-    return typeof value === "number" ? value : 0;
+    const paramName = effectId === "equipWeapon" ? "atk" : "amount";
+    const paramValue = params[paramName];
+    return typeof paramValue === "number" ? paramValue : 0;
   }
 }

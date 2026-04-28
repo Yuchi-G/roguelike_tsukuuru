@@ -21,12 +21,12 @@ export type Dungeon = {
  */
 export class DungeonGenerator {
   constructor(
-    private width: number,
-    private height: number,
-    private maxRooms = 12,
+    private dungeonWidth: number,
+    private dungeonHeight: number,
+    private maxRoomCount = 12,
     private minRoomSize = 5,
     private maxRoomSize = 10,
-    private tiles: Record<TileType, TileDefinition> = defaultTileDefinitions,
+    private tileDefinitions: Record<TileType, TileDefinition> = defaultTileDefinitions,
   ) {}
 
   /**
@@ -34,51 +34,51 @@ export class DungeonGenerator {
    * ランダムな部屋を重ならないように配置し、直前の部屋と通路で接続する。
    */
   generate(): Dungeon {
-    const map = new GameMap(this.width, this.height, Tile.fromDefinition(this.tiles.wall));
-    const rooms: Room[] = [];
+    const dungeonMap = new GameMap(this.dungeonWidth, this.dungeonHeight, Tile.fromDefinition(this.tileDefinitions.wall));
+    const dungeonRooms: Room[] = [];
 
-    for (let i = 0; i < this.maxRooms; i += 1) {
-      const width = this.randomInt(this.minRoomSize, this.maxRoomSize);
-      const height = this.randomInt(this.minRoomSize, this.maxRoomSize);
-      const x = this.randomInt(1, this.width - width - 2);
-      const y = this.randomInt(1, this.height - height - 2);
-      const room = { x, y, width, height };
+    for (let roomAttemptIndex = 0; roomAttemptIndex < this.maxRoomCount; roomAttemptIndex += 1) {
+      const roomWidth = this.randomIntInclusive(this.minRoomSize, this.maxRoomSize);
+      const roomHeight = this.randomIntInclusive(this.minRoomSize, this.maxRoomSize);
+      const roomX = this.randomIntInclusive(1, this.dungeonWidth - roomWidth - 2);
+      const roomY = this.randomIntInclusive(1, this.dungeonHeight - roomHeight - 2);
+      const candidateRoom = { x: roomX, y: roomY, width: roomWidth, height: roomHeight };
 
-      if (rooms.some((existing) => this.roomsOverlap(room, existing))) {
+      if (dungeonRooms.some((existingRoom) => this.doRoomsOverlap(candidateRoom, existingRoom))) {
         continue;
       }
 
-      this.carveRoom(map, room);
+      this.carveRoom(dungeonMap, candidateRoom);
 
-      const previous = rooms[rooms.length - 1];
-      if (previous) {
-        const [prevX, prevY] = this.center(previous);
-        const [newX, newY] = this.center(room);
+      const previousRoom = dungeonRooms[dungeonRooms.length - 1];
+      if (previousRoom) {
+        const [previousCenterX, previousCenterY] = this.getRoomCenter(previousRoom);
+        const [newCenterX, newCenterY] = this.getRoomCenter(candidateRoom);
         if (Math.random() < 0.5) {
-          this.carveHorizontalTunnel(map, prevX, newX, prevY);
-          this.carveVerticalTunnel(map, prevY, newY, newX);
+          this.carveHorizontalTunnel(dungeonMap, previousCenterX, newCenterX, previousCenterY);
+          this.carveVerticalTunnel(dungeonMap, previousCenterY, newCenterY, newCenterX);
         } else {
-          this.carveVerticalTunnel(map, prevY, newY, prevX);
-          this.carveHorizontalTunnel(map, prevX, newX, newY);
+          this.carveVerticalTunnel(dungeonMap, previousCenterY, newCenterY, previousCenterX);
+          this.carveHorizontalTunnel(dungeonMap, previousCenterX, newCenterX, newCenterY);
         }
       }
 
-      rooms.push(room);
+      dungeonRooms.push(candidateRoom);
     }
 
-    const lastRoom = rooms[rooms.length - 1];
+    const lastRoom = dungeonRooms[dungeonRooms.length - 1];
     if (lastRoom) {
-      const [stairsX, stairsY] = this.center(lastRoom);
-      map.setTile(stairsX, stairsY, Tile.fromDefinition(this.tiles.stairs));
+      const [stairsX, stairsY] = this.getRoomCenter(lastRoom);
+      dungeonMap.setTile(stairsX, stairsY, Tile.fromDefinition(this.tileDefinitions.stairs));
     }
 
-    this.scatterCustomTiles(map);
+    this.scatterCustomFloorTiles(dungeonMap);
 
-    return { map, rooms };
+    return { map: dungeonMap, rooms: dungeonRooms };
   }
 
   /** 部屋の中心座標。プレイヤー初期位置や通路接続に使う。 */
-  center(room: Room): [number, number] {
+  getRoomCenter(room: Room): [number, number] {
     return [
       Math.floor(room.x + room.width / 2),
       Math.floor(room.y + room.height / 2),
@@ -86,11 +86,11 @@ export class DungeonGenerator {
   }
 
   /** 敵やアイテムを置くため、ランダムな部屋の床座標を選ぶ。 */
-  randomFloorPosition(rooms: Room[]): [number, number] {
-    const room = rooms[this.randomInt(0, rooms.length - 1)];
+  pickRandomRoomFloorPosition(rooms: Room[]): [number, number] {
+    const selectedRoom = rooms[this.randomIntInclusive(0, rooms.length - 1)];
     return [
-      this.randomInt(room.x + 1, room.x + room.width - 2),
-      this.randomInt(room.y + 1, room.y + room.height - 2),
+      this.randomIntInclusive(selectedRoom.x + 1, selectedRoom.x + selectedRoom.width - 2),
+      this.randomIntInclusive(selectedRoom.y + 1, selectedRoom.y + selectedRoom.height - 2),
     ];
   }
 
@@ -98,7 +98,7 @@ export class DungeonGenerator {
   private carveRoom(map: GameMap, room: Room): void {
     for (let y = room.y; y < room.y + room.height; y += 1) {
       for (let x = room.x; x < room.x + room.width; x += 1) {
-        map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
+        map.setTile(x, y, Tile.fromDefinition(this.tileDefinitions.floor));
       }
     }
   }
@@ -106,24 +106,24 @@ export class DungeonGenerator {
   /** 横方向の通路を床タイルで掘る。 */
   private carveHorizontalTunnel(map: GameMap, x1: number, x2: number, y: number): void {
     for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x += 1) {
-      map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
+      map.setTile(x, y, Tile.fromDefinition(this.tileDefinitions.floor));
     }
   }
 
   /** 縦方向の通路を床タイルで掘る。 */
   private carveVerticalTunnel(map: GameMap, y1: number, y2: number, x: number): void {
     for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y += 1) {
-      map.setTile(x, y, Tile.fromDefinition(this.tiles.floor));
+      map.setTile(x, y, Tile.fromDefinition(this.tileDefinitions.floor));
     }
   }
 
   /** 部屋同士が重なると通路設計が崩れやすいため、配置前に判定する。 */
-  private roomsOverlap(a: Room, b: Room): boolean {
+  private doRoomsOverlap(firstRoom: Room, secondRoom: Room): boolean {
     return (
-      a.x <= b.x + b.width &&
-      a.x + a.width >= b.x &&
-      a.y <= b.y + b.height &&
-      a.y + a.height >= b.y
+      firstRoom.x <= secondRoom.x + secondRoom.width &&
+      firstRoom.x + firstRoom.width >= secondRoom.x &&
+      firstRoom.y <= secondRoom.y + secondRoom.height &&
+      firstRoom.y + firstRoom.height >= secondRoom.y
     );
   }
 
@@ -131,20 +131,20 @@ export class DungeonGenerator {
    * コアタイル（wall/floor/stairs）以外のタイルを、scatterRate に従って床タイルに散布する。
    * ダンジョン生成後のポストプロセスとして呼ぶ。
    */
-  private scatterCustomTiles(map: GameMap): void {
+  private scatterCustomFloorTiles(map: GameMap): void {
     const coreTileTypes = new Set(["wall", "floor", "stairs"]);
-    const customTiles = Object.values(this.tiles).filter(
-      (tile) => !coreTileTypes.has(tile.type) && (tile.scatterRate ?? 0) > 0,
+    const customFloorTileDefinitions = Object.values(this.tileDefinitions).filter(
+      (tileDefinition) => !coreTileTypes.has(tileDefinition.type) && (tileDefinition.scatterRate ?? 0) > 0,
     );
 
-    if (customTiles.length === 0) return;
+    if (customFloorTileDefinitions.length === 0) return;
 
-    for (let y = 0; y < this.height; y += 1) {
-      for (let x = 0; x < this.width; x += 1) {
-        if (map.getTile(x, y).type !== "floor") continue;
-        for (const tileDef of customTiles) {
-          if (Math.random() < (tileDef.scatterRate ?? 0)) {
-            map.setTile(x, y, Tile.fromDefinition(tileDef));
+    for (let tileY = 0; tileY < this.dungeonHeight; tileY += 1) {
+      for (let tileX = 0; tileX < this.dungeonWidth; tileX += 1) {
+        if (map.getTile(tileX, tileY).type !== "floor") continue;
+        for (const customFloorTileDefinition of customFloorTileDefinitions) {
+          if (Math.random() < (customFloorTileDefinition.scatterRate ?? 0)) {
+            map.setTile(tileX, tileY, Tile.fromDefinition(customFloorTileDefinition));
             break;
           }
         }
@@ -152,7 +152,7 @@ export class DungeonGenerator {
     }
   }
 
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  private randomIntInclusive(minValue: number, maxValue: number): number {
+    return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
   }
 }

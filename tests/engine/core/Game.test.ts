@@ -13,7 +13,7 @@ import type { GameConfig } from "../../../src/engine/core/GameConfig";
 /** canvas.getContext("2d") のモック。jsdom は Canvas API を持たないため。 */
 function mockCanvas(): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  const ctx = {
+  const canvasContext = {
     fillStyle: "",
     font: "",
     textAlign: "",
@@ -22,7 +22,7 @@ function mockCanvas(): HTMLCanvasElement {
     fillText: vi.fn(),
     clearRect: vi.fn(),
   };
-  vi.spyOn(canvas, "getContext").mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(canvas, "getContext").mockReturnValue(canvasContext as unknown as CanvasRenderingContext2D);
   return canvas;
 }
 
@@ -33,9 +33,9 @@ function freshConfig(): GameConfig {
 function makeMap(): GameMap {
   const map = new GameMap(10, 10, Tile.wall());
   // 中央にフロアタイルを置く
-  for (let y = 1; y < 9; y++) {
-    for (let x = 1; x < 9; x++) {
-      map.setTile(x, y, new Tile("floor", ".", "#555", "#111", false));
+  for (let tileY = 1; tileY < 9; tileY += 1) {
+    for (let tileX = 1; tileX < 9; tileX += 1) {
+      map.setTile(tileX, tileY, new Tile("floor", ".", "#555", "#111", false));
     }
   }
   return map;
@@ -73,7 +73,7 @@ describe("Game: 設定変更後のステータス再計算", () => {
     player.maxHp = 30;
     player.hp = 30;
 
-    game.start(map, player, [], []);
+    game.startDungeonFloor(map, player, [], []);
 
     // 設定変更を反映（resumeAfterConfigChange 経由で applyPlayerConfigToCurrentPlayer が呼ばれる）
     game.resumeAfterConfigChange();
@@ -94,7 +94,7 @@ describe("Game: 設定変更後のステータス再計算", () => {
     player.level = 4; // 3レベル分の成長
     player.attackPower = 5;
 
-    game.start(map, player, [], []);
+    game.startDungeonFloor(map, player, [], []);
     game.resumeAfterConfigChange();
 
     expect(Number.isInteger(game.player.attackPower)).toBe(true);
@@ -116,7 +116,7 @@ describe("Game: 設定変更後のステータス再計算", () => {
     player.hp = 15;
     player.attackPower = 3;
 
-    game.start(map, player, [], []);
+    game.startDungeonFloor(map, player, [], []);
     game.resumeAfterConfigChange();
 
     // maxHp: 20 + 4 * 3.33 = 33.32 → 33

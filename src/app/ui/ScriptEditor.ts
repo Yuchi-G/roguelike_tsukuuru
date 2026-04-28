@@ -122,67 +122,67 @@ const TRIGGERS: Option[] = [
 
 // ========================== デフォルト値の生成 ==========================
 
-function lit(value: ScriptValue): ValueRef {
-  return { type: "literal", value };
+function literalValueRef(literalValue: ScriptValue): ValueRef {
+  return { type: "literal", value: literalValue };
 }
 
-function defaultNode(type: string): ScriptNode {
-  switch (type) {
+function createDefaultScriptNode(nodeType: string): ScriptNode {
+  switch (nodeType) {
     case "if": return { type: "if", condition: { type: "true" }, then: [] };
-    case "loop": return { type: "loop", count: lit(3), body: [] };
+    case "loop": return { type: "loop", count: literalValueRef(3), body: [] };
     case "while": return { type: "while", condition: { type: "true" }, body: [] };
     case "break": return { type: "break" };
     default: return { type: "action", action: { type: "doNothing" } };
   }
 }
 
-function defaultAction(type: string): Action {
-  switch (type) {
+function createDefaultAction(actionType: string): Action {
+  switch (actionType) {
     case "move": return { type: "move", actor: "self", mode: { type: "random" } };
     case "attack": return { type: "attack", attacker: "self", defender: "player" };
-    case "damage": return { type: "damage", target: "player", amount: lit(1) };
-    case "heal": return { type: "heal", target: "self", amount: lit(5) };
-    case "setStat": return { type: "setStat", target: "self", stat: "hp", value: lit(10) };
-    case "setVariable": return { type: "setVariable", scope: "global", name: "flag", value: lit(1) };
-    case "addVariable": return { type: "addVariable", scope: "global", name: "counter", op: "+", value: lit(1) };
-    case "addStatus": return { type: "addStatus", target: "player", statusId: "", turns: lit(3) };
+    case "damage": return { type: "damage", target: "player", amount: literalValueRef(1) };
+    case "heal": return { type: "heal", target: "self", amount: literalValueRef(5) };
+    case "setStat": return { type: "setStat", target: "self", stat: "hp", value: literalValueRef(10) };
+    case "setVariable": return { type: "setVariable", scope: "global", name: "flag", value: literalValueRef(1) };
+    case "addVariable": return { type: "addVariable", scope: "global", name: "counter", op: "+", value: literalValueRef(1) };
+    case "addStatus": return { type: "addStatus", target: "player", statusId: "", turns: literalValueRef(3) };
     case "removeStatus": return { type: "removeStatus", target: "player", statusId: "" };
     case "offerBagItem": return { type: "offerBagItem", itemId: "" };
-    case "equipWeapon": return { type: "equipWeapon", target: "player", itemName: lit(""), atk: lit(1) };
+    case "equipWeapon": return { type: "equipWeapon", target: "player", itemName: literalValueRef(""), atk: literalValueRef(1) };
     case "useSkill": return { type: "useSkill", user: "self", skillId: "", target: "player" };
     case "log": return { type: "log", message: "", params: {} };
-    case "wait": return { type: "wait", turns: lit(1) };
+    case "wait": return { type: "wait", turns: literalValueRef(1) };
     case "endGame": return { type: "endGame" };
     default: return { type: "doNothing" };
   }
 }
 
-function defaultCondition(type: string): Condition {
-  switch (type) {
-    case "compare": return { type: "compare", left: { type: "stat", target: "self", stat: "hpPercent" }, op: "<", right: lit(50) };
+function createDefaultCondition(conditionType: string): Condition {
+  switch (conditionType) {
+    case "compare": return { type: "compare", left: { type: "stat", target: "self", stat: "hpPercent" }, op: "<", right: literalValueRef(50) };
     case "and": return { type: "and", conditions: [{ type: "true" }] };
     case "or": return { type: "or", conditions: [{ type: "true" }] };
     case "not": return { type: "not", condition: { type: "true" } };
     case "hasItem": return { type: "hasItem", target: "player", itemId: "" };
     case "hasStatus": return { type: "hasStatus", target: "self", statusId: "" };
-    case "inRange": return { type: "inRange", target: "player", from: "self", distance: lit(1) };
+    case "inRange": return { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) };
     case "inFov": return { type: "inFov", target: "player", observer: "self" };
-    case "random": return { type: "random", percent: lit(50) };
+    case "random": return { type: "random", percent: literalValueRef(50) };
     case "true": return { type: "true" };
     default: return { type: "false" };
   }
 }
 
-function defaultValueRef(type: string): ValueRef {
-  switch (type) {
+function createDefaultValueRef(valueRefType: string): ValueRef {
+  switch (valueRefType) {
     case "variable": return { type: "variable", scope: "global", name: "flag" };
     case "stat": return { type: "stat", target: "self", stat: "hp" };
-    default: return lit(0);
+    default: return literalValueRef(0);
   }
 }
 
-function defaultMoveMode(type: string): MoveMode {
-  switch (type) {
+function createDefaultMoveMode(moveModeType: string): MoveMode {
+  switch (moveModeType) {
     case "toward": return { type: "toward", target: "player" };
     case "away": return { type: "away", target: "player" };
     case "direction": return { type: "direction", dx: 1, dy: 0 };
@@ -205,8 +205,8 @@ export class ScriptEditor {
     private onChange?: () => void,
   ) {
     this.script = structuredClone(script);
-    this.container.addEventListener("click", (e) => this.handleClick(e));
-    this.container.addEventListener("change", (e) => this.handleChange(e));
+    this.container.addEventListener("click", (event) => this.handleClick(event));
+    this.container.addEventListener("change", (event) => this.handleChange(event));
     this.render();
   }
 
@@ -228,86 +228,90 @@ export class ScriptEditor {
    * 例: "body.0.action.type" → script.body[0].action.type
    */
   private navigateTo(path: string): unknown {
-    const parts = path.split(".");
-    let obj: unknown = this.script;
-    for (const part of parts) {
-      if (obj === null || obj === undefined) return undefined;
-      const idx = parseInt(part);
-      obj = (obj as Record<string, unknown>)[!isNaN(idx) ? idx : part];
+    const pathSegments = path.split(".");
+    let currentValue: unknown = this.script;
+    for (const pathSegment of pathSegments) {
+      if (currentValue === null || currentValue === undefined) return undefined;
+      const arrayIndex = parseInt(pathSegment);
+      currentValue = (currentValue as Record<string, unknown>)[!isNaN(arrayIndex) ? arrayIndex : pathSegment];
     }
-    return obj;
+    return currentValue;
   }
 
   /** パスの末尾の値を設定する。 */
-  private setAtPath(path: string, value: unknown): void {
-    const parts = path.split(".");
-    let obj: unknown = this.script;
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (obj === null || obj === undefined) return;
-      const idx = parseInt(parts[i]);
-      obj = (obj as Record<string, unknown>)[!isNaN(idx) ? idx : parts[i]];
+  private setAtPath(path: string, newValue: unknown): void {
+    const pathSegments = path.split(".");
+    let parentValue: unknown = this.script;
+    for (let pathIndex = 0; pathIndex < pathSegments.length - 1; pathIndex += 1) {
+      if (parentValue === null || parentValue === undefined) return;
+      const arrayIndex = parseInt(pathSegments[pathIndex]);
+      parentValue = (parentValue as Record<string, unknown>)[!isNaN(arrayIndex) ? arrayIndex : pathSegments[pathIndex]];
     }
-    if (obj === null || obj === undefined) return;
-    const last = parts[parts.length - 1];
-    (obj as Record<string, unknown>)[last] = value;
+    if (parentValue === null || parentValue === undefined) return;
+    const propertyName = pathSegments[pathSegments.length - 1];
+    (parentValue as Record<string, unknown>)[propertyName] = newValue;
   }
 
   /** パスが指す配列を取得する。 */
   private getArrayAtPath(path: string): unknown[] | null {
-    const arr = this.navigateTo(path);
-    return Array.isArray(arr) ? arr : null;
+    const pathValue = this.navigateTo(path);
+    return Array.isArray(pathValue) ? pathValue : null;
   }
 
   // ========================== イベントハンドリング ==========================
 
   /** ボタンクリックで、ノード追加/削除/並び替えなどを処理する。 */
   private handleClick(event: MouseEvent): void {
-    const btn = (event.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
-    if (!btn) return;
+    const actionButton = (event.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
+    if (!actionButton) return;
 
-    const action = btn.dataset.action!;
-    const path = btn.dataset.path ?? "";
-    const index = parseInt(btn.dataset.index ?? "-1");
+    const editorAction = actionButton.dataset.action!;
+    const targetPath = actionButton.dataset.path ?? "";
+    const targetIndex = parseInt(actionButton.dataset.index ?? "-1");
 
-    switch (action) {
+    switch (editorAction) {
       case "add-node": {
-        const arr = this.getArrayAtPath(path);
-        if (arr) arr.push(defaultNode("action"));
+        const scriptNodeList = this.getArrayAtPath(targetPath);
+        if (scriptNodeList) scriptNodeList.push(createDefaultScriptNode("action"));
         break;
       }
       case "remove-node": {
-        const arr = this.getArrayAtPath(path);
-        if (arr && index >= 0 && index < arr.length) arr.splice(index, 1);
+        const scriptNodeList = this.getArrayAtPath(targetPath);
+        if (scriptNodeList && targetIndex >= 0 && targetIndex < scriptNodeList.length) scriptNodeList.splice(targetIndex, 1);
         break;
       }
       case "move-up": {
-        const arr = this.getArrayAtPath(path);
-        if (arr && index > 0) [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+        const scriptNodeList = this.getArrayAtPath(targetPath);
+        if (scriptNodeList && targetIndex > 0) {
+          [scriptNodeList[targetIndex - 1], scriptNodeList[targetIndex]] = [scriptNodeList[targetIndex], scriptNodeList[targetIndex - 1]];
+        }
         break;
       }
       case "move-down": {
-        const arr = this.getArrayAtPath(path);
-        if (arr && index >= 0 && index < arr.length - 1) [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+        const scriptNodeList = this.getArrayAtPath(targetPath);
+        if (scriptNodeList && targetIndex >= 0 && targetIndex < scriptNodeList.length - 1) {
+          [scriptNodeList[targetIndex], scriptNodeList[targetIndex + 1]] = [scriptNodeList[targetIndex + 1], scriptNodeList[targetIndex]];
+        }
         break;
       }
       case "toggle-else": {
-        const node = this.navigateTo(path) as ScriptNode | null;
-        if (node && node.type === "if") {
-          node.else = node.else ? undefined : [];
+        const scriptNode = this.navigateTo(targetPath) as ScriptNode | null;
+        if (scriptNode && scriptNode.type === "if") {
+          scriptNode.else = scriptNode.else ? undefined : [];
         }
         break;
       }
       case "add-sub-cond": {
-        const cond = this.navigateTo(path) as Condition | null;
-        if (cond && (cond.type === "and" || cond.type === "or")) {
-          cond.conditions.push({ type: "true" });
+        const condition = this.navigateTo(targetPath) as Condition | null;
+        if (condition && (condition.type === "and" || condition.type === "or")) {
+          condition.conditions.push({ type: "true" });
         }
         break;
       }
       case "remove-sub-cond": {
-        const cond = this.navigateTo(path) as Condition | null;
-        if (cond && (cond.type === "and" || cond.type === "or") && index >= 0) {
-          cond.conditions.splice(index, 1);
+        const condition = this.navigateTo(targetPath) as Condition | null;
+        if (condition && (condition.type === "and" || condition.type === "or") && targetIndex >= 0) {
+          condition.conditions.splice(targetIndex, 1);
         }
         break;
       }
@@ -315,8 +319,8 @@ export class ScriptEditor {
         this.script.variables.push({ name: "var" + this.script.variables.length, scope: "global", initialValue: 0 });
         break;
       case "remove-var":
-        if (index >= 0 && index < this.script.variables.length) {
-          this.script.variables.splice(index, 1);
+        if (targetIndex >= 0 && targetIndex < this.script.variables.length) {
+          this.script.variables.splice(targetIndex, 1);
         }
         break;
       default:
@@ -328,39 +332,39 @@ export class ScriptEditor {
 
   /** select/input の変更で、ノード型の切り替えやプロパティ値の更新を処理する。 */
   private handleChange(event: Event): void {
-    const el = event.target;
-    if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return;
+    const changedField = event.target;
+    if (!(changedField instanceof HTMLInputElement || changedField instanceof HTMLSelectElement || changedField instanceof HTMLTextAreaElement)) return;
 
-    const action = el.dataset.action;
-    if (!action) return;
+    const editorAction = changedField.dataset.action;
+    if (!editorAction) return;
 
-    const path = el.dataset.path ?? "";
-    const value = el.value;
+    const targetPath = changedField.dataset.path ?? "";
+    const fieldValue = changedField.value;
 
-    switch (action) {
+    switch (editorAction) {
       case "change-node-type": {
-        const arr = this.getArrayAtPath(path);
-        const index = parseInt(el.dataset.index ?? "-1");
-        if (arr && index >= 0 && index < arr.length) {
-          arr[index] = defaultNode(value);
+        const scriptNodeList = this.getArrayAtPath(targetPath);
+        const targetIndex = parseInt(changedField.dataset.index ?? "-1");
+        if (scriptNodeList && targetIndex >= 0 && targetIndex < scriptNodeList.length) {
+          scriptNodeList[targetIndex] = createDefaultScriptNode(fieldValue);
         }
         break;
       }
       case "change-action-type":
-        this.setAtPath(path, defaultAction(value));
+        this.setAtPath(targetPath, createDefaultAction(fieldValue));
         break;
       case "change-condition-type":
-        this.setAtPath(path, defaultCondition(value));
+        this.setAtPath(targetPath, createDefaultCondition(fieldValue));
         break;
       case "change-move-mode":
-        this.setAtPath(path, defaultMoveMode(value));
+        this.setAtPath(targetPath, createDefaultMoveMode(fieldValue));
         break;
       case "change-valueref-type":
-        this.setAtPath(path, defaultValueRef(value));
+        this.setAtPath(targetPath, createDefaultValueRef(fieldValue));
         break;
       case "set-prop": {
-        const parsed = this.parseInputValue(value, el instanceof HTMLInputElement ? el.type : "text");
-        this.setAtPath(path, parsed);
+        const parsedFieldValue = this.parseInputValue(fieldValue, changedField instanceof HTMLInputElement ? changedField.type : "text");
+        this.setAtPath(targetPath, parsedFieldValue);
         break;
       }
       default:
@@ -371,17 +375,17 @@ export class ScriptEditor {
   }
 
   /** 入力値を number / boolean / string に変換する。 */
-  private parseInputValue(value: string, inputType: string): ScriptValue {
+  private parseInputValue(rawInputValue: string, inputType: string): ScriptValue {
     if (inputType === "number") {
-      const num = parseFloat(value);
-      return Number.isFinite(num) ? num : 0;
+      const parsedNumber = parseFloat(rawInputValue);
+      return Number.isFinite(parsedNumber) ? parsedNumber : 0;
     }
-    if (inputType === "checkbox") return value === "on";
-    if (value === "true") return true;
-    if (value === "false") return false;
-    const num = Number(value);
-    if (value !== "" && Number.isFinite(num) && String(num) === value) return num;
-    return value;
+    if (inputType === "checkbox") return rawInputValue === "on";
+    if (rawInputValue === "true") return true;
+    if (rawInputValue === "false") return false;
+    const parsedNumber = Number(rawInputValue);
+    if (rawInputValue !== "" && Number.isFinite(parsedNumber) && String(parsedNumber) === rawInputValue) return parsedNumber;
+    return rawInputValue;
   }
 
   /** 変更を通知してから再描画する。 */
@@ -414,18 +418,18 @@ export class ScriptEditor {
   }
 
   private renderVariables(): string {
-    const rows = this.script.variables.map((v, i) => [
+    const variableRowsHtml = this.script.variables.map((variableDefinition, variableIndex) => [
       '<div class="se-var-row">',
-      `<input data-action="set-prop" data-path="variables.${i}.name" value="${this.esc(v.name)}" placeholder="変数名" />`,
-      this.sel(`data-action="set-prop" data-path="variables.${i}.scope"`, v.scope, SCOPES),
-      `<input data-action="set-prop" data-path="variables.${i}.initialValue" value="${this.esc(String(v.initialValue))}" placeholder="初期値" />`,
-      `<button data-action="remove-var" data-index="${i}" class="se-btn-icon" title="削除">\u2715</button>`,
+      `<input data-action="set-prop" data-path="variables.${variableIndex}.name" value="${this.escapeHtml(variableDefinition.name)}" placeholder="変数名" />`,
+      this.renderSelect(`data-action="set-prop" data-path="variables.${variableIndex}.scope"`, variableDefinition.scope, SCOPES),
+      `<input data-action="set-prop" data-path="variables.${variableIndex}.initialValue" value="${this.escapeHtml(String(variableDefinition.initialValue))}" placeholder="初期値" />`,
+      `<button data-action="remove-var" data-index="${variableIndex}" class="se-btn-icon" title="削除">\u2715</button>`,
       "</div>",
     ].join("")).join("");
 
     return [
       '<div class="se-section"><strong class="se-section-title">変数</strong>',
-      rows,
+      variableRowsHtml,
       '<button data-action="add-var" class="se-btn-add">+ 変数を追加</button>',
       "</div>",
     ].join("");
@@ -434,48 +438,48 @@ export class ScriptEditor {
   // ========================== ノード ==========================
 
   private renderNodes(nodes: ScriptNode[], containerPath: string): string {
-    const items = nodes.map((node, i) => this.renderNode(node, containerPath, i)).join("");
+    const scriptNodeItemsHtml = nodes.map((scriptNode, scriptNodeIndex) => this.renderNode(scriptNode, containerPath, scriptNodeIndex)).join("");
     return [
       '<div class="se-nodes">',
-      items,
-      `<button data-action="add-node" data-path="${this.esc(containerPath)}" class="se-btn-add">+ ノード追加</button>`,
+      scriptNodeItemsHtml,
+      `<button data-action="add-node" data-path="${this.escapeHtml(containerPath)}" class="se-btn-add">+ ノード追加</button>`,
       "</div>",
     ].join("");
   }
 
-  private renderNode(node: ScriptNode, containerPath: string, index: number): string {
-    const nodePath = `${containerPath}.${index}`;
-    const header = this.renderNodeHeader(node.type, containerPath, index);
+  private renderNode(scriptNode: ScriptNode, containerPath: string, nodeIndex: number): string {
+    const nodePath = `${containerPath}.${nodeIndex}`;
+    const nodeHeaderHtml = this.renderNodeHeader(scriptNode.type, containerPath, nodeIndex);
 
-    let content = "";
-    switch (node.type) {
+    let nodeContentHtml = "";
+    switch (scriptNode.type) {
       case "action":
-        content = this.renderActionBlock(node.action, `${nodePath}.action`);
+        nodeContentHtml = this.renderActionBlock(scriptNode.action, `${nodePath}.action`);
         break;
       case "if":
-        content = this.renderIfBlock(node, nodePath);
+        nodeContentHtml = this.renderIfBlock(scriptNode, nodePath);
         break;
       case "loop":
-        content = this.renderLoopBlock(node, nodePath);
+        nodeContentHtml = this.renderLoopBlock(scriptNode, nodePath);
         break;
       case "while":
-        content = this.renderWhileBlock(node, nodePath);
+        nodeContentHtml = this.renderWhileBlock(scriptNode, nodePath);
         break;
       case "break":
         break;
     }
 
-    return `<div class="se-node se-node-${this.esc(node.type)}">${header}${content}</div>`;
+    return `<div class="se-node se-node-${this.escapeHtml(scriptNode.type)}">${nodeHeaderHtml}${nodeContentHtml}</div>`;
   }
 
-  private renderNodeHeader(type: string, containerPath: string, index: number): string {
+  private renderNodeHeader(nodeType: string, containerPath: string, nodeIndex: number): string {
     return [
       '<div class="se-node-header">',
-      this.sel(`data-action="change-node-type" data-path="${this.esc(containerPath)}" data-index="${index}"`, type, NODE_TYPES),
+      this.renderSelect(`data-action="change-node-type" data-path="${this.escapeHtml(containerPath)}" data-index="${nodeIndex}"`, nodeType, NODE_TYPES),
       '<span class="se-node-buttons">',
-      `<button data-action="move-up" data-path="${this.esc(containerPath)}" data-index="${index}" class="se-btn-icon" title="上へ">\u25B2</button>`,
-      `<button data-action="move-down" data-path="${this.esc(containerPath)}" data-index="${index}" class="se-btn-icon" title="下へ">\u25BC</button>`,
-      `<button data-action="remove-node" data-path="${this.esc(containerPath)}" data-index="${index}" class="se-btn-icon se-btn-danger" title="削除">\u2715</button>`,
+      `<button data-action="move-up" data-path="${this.escapeHtml(containerPath)}" data-index="${nodeIndex}" class="se-btn-icon" title="上へ">\u25B2</button>`,
+      `<button data-action="move-down" data-path="${this.escapeHtml(containerPath)}" data-index="${nodeIndex}" class="se-btn-icon" title="下へ">\u25BC</button>`,
+      `<button data-action="remove-node" data-path="${this.escapeHtml(containerPath)}" data-index="${nodeIndex}" class="se-btn-icon se-btn-danger" title="削除">\u2715</button>`,
       "</span>",
       "</div>",
     ].join("");
@@ -492,7 +496,7 @@ export class ScriptEditor {
       '<div class="se-label">THEN:</div>',
       this.renderNodes(node.then, `${nodePath}.then`),
       hasElse ? `<div class="se-label">ELSE:</div>${this.renderNodes(node.else!, `${nodePath}.else`)}` : "",
-      `<button data-action="toggle-else" data-path="${this.esc(nodePath)}" class="se-btn-small">${hasElse ? "ELSE を削除" : "+ ELSE を追加"}</button>`,
+      `<button data-action="toggle-else" data-path="${this.escapeHtml(nodePath)}" class="se-btn-small">${hasElse ? "ELSE を削除" : "+ ELSE を追加"}</button>`,
       "</div>",
     ].join("");
   }
@@ -520,91 +524,91 @@ export class ScriptEditor {
 
   // ========================== 条件 ==========================
 
-  private renderCondition(cond: Condition, condPath: string): string {
-    const typeSelect = this.sel(
-      `data-action="change-condition-type" data-path="${this.esc(condPath)}"`,
-      cond.type,
+  private renderCondition(condition: Condition, conditionPath: string): string {
+    const typeSelect = this.renderSelect(
+      `data-action="change-condition-type" data-path="${this.escapeHtml(conditionPath)}"`,
+      condition.type,
       CONDITION_TYPES,
     );
 
-    let body = "";
-    switch (cond.type) {
+    let conditionBodyHtml = "";
+    switch (condition.type) {
       case "compare":
-        body = [
+        conditionBodyHtml = [
           '<div class="se-cond-row">',
-          this.renderValueRef(cond.left, `${condPath}.left`, "左辺"),
-          this.sel(`data-action="set-prop" data-path="${this.esc(condPath)}.op"`, cond.op, COMPARE_OPS),
-          this.renderValueRef(cond.right, `${condPath}.right`, "右辺"),
+          this.renderValueRef(condition.left, `${conditionPath}.left`, "左辺"),
+          this.renderSelect(`data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.op"`, condition.op, COMPARE_OPS),
+          this.renderValueRef(condition.right, `${conditionPath}.right`, "右辺"),
           "</div>",
         ].join("");
         break;
 
       case "and":
       case "or":
-        body = this.renderCompoundCondition(cond.conditions, condPath);
+        conditionBodyHtml = this.renderCompoundCondition(condition.conditions, conditionPath);
         break;
 
       case "not":
-        body = `<div class="se-indent">${this.renderCondition(cond.condition, `${condPath}.condition`)}</div>`;
+        conditionBodyHtml = `<div class="se-indent">${this.renderCondition(condition.condition, `${conditionPath}.condition`)}</div>`;
         break;
 
       case "hasItem":
-        body = [
+        conditionBodyHtml = [
           '<div class="se-cond-row">',
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(condPath)}.target"`, cond.target, TARGETS),
-          this.labeledInput("アイテムID", `data-action="set-prop" data-path="${this.esc(condPath)}.itemId"`, cond.itemId),
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.target"`, condition.target, TARGETS),
+          this.labeledInput("アイテムID", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.itemId"`, condition.itemId),
           "</div>",
         ].join("");
         break;
 
       case "hasStatus":
-        body = [
+        conditionBodyHtml = [
           '<div class="se-cond-row">',
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(condPath)}.target"`, cond.target, TARGETS),
-          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.esc(condPath)}.statusId"`, cond.statusId),
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.target"`, condition.target, TARGETS),
+          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.statusId"`, condition.statusId),
           "</div>",
         ].join("");
         break;
 
       case "inRange":
-        body = [
+        conditionBodyHtml = [
           '<div class="se-cond-row">',
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(condPath)}.target"`, cond.target, TARGETS),
-          this.labeledSelect("基準", `data-action="set-prop" data-path="${this.esc(condPath)}.from"`, cond.from, TARGETS),
-          this.renderValueRef(cond.distance, `${condPath}.distance`, "距離"),
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.target"`, condition.target, TARGETS),
+          this.labeledSelect("基準", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.from"`, condition.from, TARGETS),
+          this.renderValueRef(condition.distance, `${conditionPath}.distance`, "距離"),
           "</div>",
         ].join("");
         break;
 
       case "inFov":
-        body = [
+        conditionBodyHtml = [
           '<div class="se-cond-row">',
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(condPath)}.target"`, cond.target, TARGETS),
-          this.labeledSelect("観測者", `data-action="set-prop" data-path="${this.esc(condPath)}.observer"`, cond.observer, TARGETS),
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.target"`, condition.target, TARGETS),
+          this.labeledSelect("観測者", `data-action="set-prop" data-path="${this.escapeHtml(conditionPath)}.observer"`, condition.observer, TARGETS),
           "</div>",
         ].join("");
         break;
 
       case "random":
-        body = `<div class="se-cond-row">${this.renderValueRef(cond.percent, `${condPath}.percent`, "確率%")}</div>`;
+        conditionBodyHtml = `<div class="se-cond-row">${this.renderValueRef(condition.percent, `${conditionPath}.percent`, "確率%")}</div>`;
         break;
     }
 
-    return `<div class="se-condition">${typeSelect}${body}</div>`;
+    return `<div class="se-condition">${typeSelect}${conditionBodyHtml}</div>`;
   }
 
   private renderCompoundCondition(conditions: Condition[], parentCondPath: string): string {
-    const items = conditions.map((c, i) => [
+    const conditionItemsHtml = conditions.map((childCondition, conditionIndex) => [
       '<div class="se-sub-cond">',
-      this.renderCondition(c, `${parentCondPath}.conditions.${i}`),
-      `<button data-action="remove-sub-cond" data-path="${this.esc(parentCondPath)}" data-index="${i}" class="se-btn-icon se-btn-danger" title="削除">\u2715</button>`,
+      this.renderCondition(childCondition, `${parentCondPath}.conditions.${conditionIndex}`),
+      `<button data-action="remove-sub-cond" data-path="${this.escapeHtml(parentCondPath)}" data-index="${conditionIndex}" class="se-btn-icon se-btn-danger" title="削除">\u2715</button>`,
       "</div>",
     ].join("")).join("");
 
     return [
       '<div class="se-indent">',
-      items,
-      `<button data-action="add-sub-cond" data-path="${this.esc(parentCondPath)}" class="se-btn-add">+ 条件追加</button>`,
+      conditionItemsHtml,
+      `<button data-action="add-sub-cond" data-path="${this.escapeHtml(parentCondPath)}" class="se-btn-add">+ 条件追加</button>`,
       "</div>",
     ].join("");
   }
@@ -612,124 +616,124 @@ export class ScriptEditor {
   // ========================== アクション ==========================
 
   private renderActionBlock(action: Action, actionPath: string): string {
-    const typeSelect = this.sel(
-      `data-action="change-action-type" data-path="${this.esc(actionPath)}"`,
+    const typeSelect = this.renderSelect(
+      `data-action="change-action-type" data-path="${this.escapeHtml(actionPath)}"`,
       action.type,
       ACTION_TYPES,
     );
 
-    let body = "";
+    let actionBodyHtml = "";
     switch (action.type) {
       case "move":
-        body = [
-          this.labeledSelect("実行者", `data-action="set-prop" data-path="${this.esc(actionPath)}.actor"`, action.actor, TARGETS),
-          this.sel(`data-action="change-move-mode" data-path="${this.esc(actionPath)}.mode"`, action.mode.type, MOVE_MODES),
+        actionBodyHtml = [
+          this.labeledSelect("実行者", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.actor"`, action.actor, TARGETS),
+          this.renderSelect(`data-action="change-move-mode" data-path="${this.escapeHtml(actionPath)}.mode"`, action.mode.type, MOVE_MODES),
           this.renderMoveParams(action.mode, `${actionPath}.mode`),
         ].join("");
         break;
 
       case "attack":
-        body = [
-          this.labeledSelect("攻撃者", `data-action="set-prop" data-path="${this.esc(actionPath)}.attacker"`, action.attacker, TARGETS),
-          this.labeledSelect("防御者", `data-action="set-prop" data-path="${this.esc(actionPath)}.defender"`, action.defender, TARGETS),
+        actionBodyHtml = [
+          this.labeledSelect("攻撃者", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.attacker"`, action.attacker, TARGETS),
+          this.labeledSelect("防御者", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.defender"`, action.defender, TARGETS),
         ].join("");
         break;
 
       case "damage":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
           this.renderValueRef(action.amount, `${actionPath}.amount`, "量"),
         ].join("");
         break;
 
       case "heal":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
           this.renderValueRef(action.amount, `${actionPath}.amount`, "量"),
         ].join("");
         break;
 
       case "setStat":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
-          this.labeledSelect("ステータス", `data-action="set-prop" data-path="${this.esc(actionPath)}.stat"`, action.stat, STATS),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
+          this.labeledSelect("ステータス", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.stat"`, action.stat, STATS),
           this.renderValueRef(action.value, `${actionPath}.value`, "値"),
         ].join("");
         break;
 
       case "setVariable":
-        body = [
-          this.labeledSelect("スコープ", `data-action="set-prop" data-path="${this.esc(actionPath)}.scope"`, action.scope, SCOPES),
-          this.labeledInput("変数名", `data-action="set-prop" data-path="${this.esc(actionPath)}.name"`, action.name),
+        actionBodyHtml = [
+          this.labeledSelect("スコープ", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.scope"`, action.scope, SCOPES),
+          this.labeledInput("変数名", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.name"`, action.name),
           this.renderValueRef(action.value, `${actionPath}.value`, "値"),
         ].join("");
         break;
 
       case "addVariable":
-        body = [
-          this.labeledSelect("スコープ", `data-action="set-prop" data-path="${this.esc(actionPath)}.scope"`, action.scope, SCOPES),
-          this.labeledInput("変数名", `data-action="set-prop" data-path="${this.esc(actionPath)}.name"`, action.name),
-          this.sel(`data-action="set-prop" data-path="${this.esc(actionPath)}.op"`, action.op, ARITHMETIC_OPS),
+        actionBodyHtml = [
+          this.labeledSelect("スコープ", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.scope"`, action.scope, SCOPES),
+          this.labeledInput("変数名", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.name"`, action.name),
+          this.renderSelect(`data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.op"`, action.op, ARITHMETIC_OPS),
           this.renderValueRef(action.value, `${actionPath}.value`, "値"),
         ].join("");
         break;
 
       case "addStatus":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
-          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.esc(actionPath)}.statusId"`, action.statusId),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
+          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.statusId"`, action.statusId),
           this.renderValueRef(action.turns, `${actionPath}.turns`, "ターン数"),
         ].join("");
         break;
 
       case "removeStatus":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
-          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.esc(actionPath)}.statusId"`, action.statusId),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
+          this.labeledInput("状態異常ID", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.statusId"`, action.statusId),
         ].join("");
         break;
 
       case "offerBagItem":
-        body = this.labeledInput("アイテムID", `data-action="set-prop" data-path="${this.esc(actionPath)}.itemId"`, action.itemId);
+        actionBodyHtml = this.labeledInput("アイテムID", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.itemId"`, action.itemId);
         break;
 
       case "equipWeapon":
-        body = [
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
+        actionBodyHtml = [
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
           this.renderValueRef(action.itemName, `${actionPath}.itemName`, "武器名"),
           this.renderValueRef(action.atk, `${actionPath}.atk`, "攻撃力"),
         ].join("");
         break;
 
       case "useSkill":
-        body = [
-          this.labeledSelect("使用者", `data-action="set-prop" data-path="${this.esc(actionPath)}.user"`, action.user, TARGETS),
-          this.labeledInput("スキルID", `data-action="set-prop" data-path="${this.esc(actionPath)}.skillId"`, action.skillId),
-          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(actionPath)}.target"`, action.target, TARGETS),
+        actionBodyHtml = [
+          this.labeledSelect("使用者", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.user"`, action.user, TARGETS),
+          this.labeledInput("スキルID", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.skillId"`, action.skillId),
+          this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.target"`, action.target, TARGETS),
         ].join("");
         break;
 
       case "log":
-        body = this.labeledInput("メッセージ", `data-action="set-prop" data-path="${this.esc(actionPath)}.message"`, action.message);
+        actionBodyHtml = this.labeledInput("メッセージ", `data-action="set-prop" data-path="${this.escapeHtml(actionPath)}.message"`, action.message);
         break;
 
       case "wait":
-        body = this.renderValueRef(action.turns, `${actionPath}.turns`, "ターン数");
+        actionBodyHtml = this.renderValueRef(action.turns, `${actionPath}.turns`, "ターン数");
         break;
     }
 
-    return `<div class="se-action-body">${typeSelect}${body ? `<div class="se-action-params">${body}</div>` : ""}</div>`;
+    return `<div class="se-action-body">${typeSelect}${actionBodyHtml ? `<div class="se-action-params">${actionBodyHtml}</div>` : ""}</div>`;
   }
 
   private renderMoveParams(mode: MoveMode, modePath: string): string {
     switch (mode.type) {
       case "toward":
       case "away":
-        return this.labeledSelect("対象", `data-action="set-prop" data-path="${this.esc(modePath)}.target"`, mode.target, TARGETS);
+        return this.labeledSelect("対象", `data-action="set-prop" data-path="${this.escapeHtml(modePath)}.target"`, mode.target, TARGETS);
       case "direction":
         return [
-          this.labeledInput("dx", `data-action="set-prop" data-path="${this.esc(modePath)}.dx" type="number"`, String(mode.dx)),
-          this.labeledInput("dy", `data-action="set-prop" data-path="${this.esc(modePath)}.dy" type="number"`, String(mode.dy)),
+          this.labeledInput("dx", `data-action="set-prop" data-path="${this.escapeHtml(modePath)}.dx" type="number"`, String(mode.dx)),
+          this.labeledInput("dy", `data-action="set-prop" data-path="${this.escapeHtml(modePath)}.dy" type="number"`, String(mode.dy)),
         ].join("");
       default:
         return "";
@@ -738,59 +742,59 @@ export class ScriptEditor {
 
   // ========================== ValueRef ==========================
 
-  private renderValueRef(ref: ValueRef, refPath: string, label: string): string {
-    const typeSelect = this.sel(
-      `data-action="change-valueref-type" data-path="${this.esc(refPath)}"`,
-      ref.type,
+  private renderValueRef(valueReference: ValueRef, valueReferencePath: string, label: string): string {
+    const typeSelect = this.renderSelect(
+      `data-action="change-valueref-type" data-path="${this.escapeHtml(valueReferencePath)}"`,
+      valueReference.type,
       VALUEREF_TYPES,
     );
 
-    let fields = "";
-    switch (ref.type) {
+    let valueReferenceFieldsHtml = "";
+    switch (valueReference.type) {
       case "literal":
-        fields = `<input data-action="set-prop" data-path="${this.esc(refPath)}.value" value="${this.esc(String(ref.value))}" class="se-input-sm" />`;
+        valueReferenceFieldsHtml = `<input data-action="set-prop" data-path="${this.escapeHtml(valueReferencePath)}.value" value="${this.escapeHtml(String(valueReference.value))}" class="se-input-sm" />`;
         break;
       case "variable":
-        fields = [
-          this.sel(`data-action="set-prop" data-path="${this.esc(refPath)}.scope"`, ref.scope, SCOPES),
-          `<input data-action="set-prop" data-path="${this.esc(refPath)}.name" value="${this.esc(ref.name)}" class="se-input-sm" placeholder="変数名" />`,
+        valueReferenceFieldsHtml = [
+          this.renderSelect(`data-action="set-prop" data-path="${this.escapeHtml(valueReferencePath)}.scope"`, valueReference.scope, SCOPES),
+          `<input data-action="set-prop" data-path="${this.escapeHtml(valueReferencePath)}.name" value="${this.escapeHtml(valueReference.name)}" class="se-input-sm" placeholder="変数名" />`,
         ].join("");
         break;
       case "stat":
-        fields = [
-          this.sel(`data-action="set-prop" data-path="${this.esc(refPath)}.target"`, ref.target, TARGETS),
-          this.sel(`data-action="set-prop" data-path="${this.esc(refPath)}.stat"`, ref.stat, STATS),
+        valueReferenceFieldsHtml = [
+          this.renderSelect(`data-action="set-prop" data-path="${this.escapeHtml(valueReferencePath)}.target"`, valueReference.target, TARGETS),
+          this.renderSelect(`data-action="set-prop" data-path="${this.escapeHtml(valueReferencePath)}.stat"`, valueReference.stat, STATS),
         ].join("");
         break;
     }
 
-    return `<span class="se-valueref"><span class="se-vr-label">${this.esc(label)}</span>${typeSelect}${fields}</span>`;
+    return `<span class="se-valueref"><span class="se-vr-label">${this.escapeHtml(label)}</span>${typeSelect}${valueReferenceFieldsHtml}</span>`;
   }
 
   // ========================== HTML ヘルパー ==========================
 
   /** ラベル付き select を返す。 */
-  private labeledSelect(label: string, attrs: string, value: string, options: Option[]): string {
-    return `<label class="se-field"><span>${this.esc(label)}</span>${this.sel(attrs, value, options)}</label>`;
+  private labeledSelect(label: string, attributesHtml: string, selectedValue: string, options: Option[]): string {
+    return `<label class="se-field"><span>${this.escapeHtml(label)}</span>${this.renderSelect(attributesHtml, selectedValue, options)}</label>`;
   }
 
   /** ラベル付き input を返す。 */
-  private labeledInput(label: string, attrs: string, value: string): string {
-    return `<label class="se-field"><span>${this.esc(label)}</span><input ${attrs} value="${this.esc(value)}" /></label>`;
+  private labeledInput(label: string, attributesHtml: string, fieldValue: string): string {
+    return `<label class="se-field"><span>${this.escapeHtml(label)}</span><input ${attributesHtml} value="${this.escapeHtml(fieldValue)}" /></label>`;
   }
 
   /** select 要素を返す。現在値が選択肢にない場合は一時的な項目を追加する。 */
-  private sel(attrs: string, value: string, options: Option[]): string {
-    const hasValue = options.some(([v]) => v === value);
-    const extraOption = hasValue ? "" : `<option value="${this.esc(value)}" selected>(未実装) ${this.esc(value)}</option>`;
+  private renderSelect(attributesHtml: string, selectedValue: string, options: Option[]): string {
+    const hasSelectedValue = options.some(([optionValue]) => optionValue === selectedValue);
+    const extraOption = hasSelectedValue ? "" : `<option value="${this.escapeHtml(selectedValue)}" selected>(未実装) ${this.escapeHtml(selectedValue)}</option>`;
     const optionsHtml = options
-      .map(([v, label]) => `<option value="${this.esc(v)}"${v === value ? " selected" : ""}>${this.esc(label)}</option>`)
+      .map(([optionValue, optionLabel]) => `<option value="${this.escapeHtml(optionValue)}"${optionValue === selectedValue ? " selected" : ""}>${this.escapeHtml(optionLabel)}</option>`)
       .join("");
-    return `<select ${attrs}>${extraOption}${optionsHtml}</select>`;
+    return `<select ${attributesHtml}>${extraOption}${optionsHtml}</select>`;
   }
 
-  private esc(s: string): string {
-    return s
+  private escapeHtml(rawText: string): string {
+    return rawText
       .replace(/&/g, "&amp;")
       .replace(/"/g, "&quot;")
       .replace(/</g, "&lt;")

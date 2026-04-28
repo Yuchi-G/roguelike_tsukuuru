@@ -73,12 +73,12 @@ export class ConfigPanel {
 
   private get aiOptions(): string[] {
     const custom = this.config.customAiIds ?? [];
-    return [...defaultAiOptions, ...custom.filter((id) => !defaultAiOptions.includes(id))];
+    return [...defaultAiOptions, ...custom.filter((customAiId) => !defaultAiOptions.includes(customAiId))];
   }
 
   private get effectOptions(): string[] {
     const custom = this.config.customEffectIds ?? [];
-    return [...defaultEffectOptions, ...custom.filter((id) => !defaultEffectOptions.includes(id))];
+    return [...defaultEffectOptions, ...custom.filter((customEffectId) => !defaultEffectOptions.includes(customEffectId))];
   }
 
   /** 全セクションのHTMLを組み立てて root に書き込む。 */
@@ -180,25 +180,25 @@ export class ConfigPanel {
   }
 
   private renderEnemy(enemy: EnemyDefinition): string {
-    const prefix = `enemy.${enemy.id}`;
+    const enemyFieldPrefix = `enemy.${enemy.id}`;
     return [
       '<div class="config-group">',
       `<strong>${escapeHtml(enemy.name)}</strong>`,
-      this.checkboxInput("削除", `${prefix}.delete`, false),
-      this.textInput("名前", `${prefix}.name`, enemy.name),
-      this.textInput("見た目", `${prefix}.char`, enemy.char, 1),
-      this.colorInput("色", `${prefix}.color`, enemy.color),
-      this.numberInput("HP", `${prefix}.maxHp`, enemy.maxHp, 1),
-      this.numberInput("攻撃", `${prefix}.attackPower`, enemy.attackPower, 0),
-      this.numberInput("EXP", `${prefix}.expValue`, enemy.expValue, 0),
-      this.selectInput("AI", `${prefix}.aiId`, enemy.aiId, this.aiOptions),
+      this.checkboxInput("削除", `${enemyFieldPrefix}.delete`, false),
+      this.textInput("名前", `${enemyFieldPrefix}.name`, enemy.name),
+      this.textInput("見た目", `${enemyFieldPrefix}.char`, enemy.char, 1),
+      this.colorInput("色", `${enemyFieldPrefix}.color`, enemy.color),
+      this.numberInput("HP", `${enemyFieldPrefix}.maxHp`, enemy.maxHp, 1),
+      this.numberInput("攻撃", `${enemyFieldPrefix}.attackPower`, enemy.attackPower, 0),
+      this.numberInput("EXP", `${enemyFieldPrefix}.expValue`, enemy.expValue, 0),
+      this.selectInput("AI", `${enemyFieldPrefix}.aiId`, enemy.aiId, this.aiOptions),
       `<div class="script-editor-mount" data-script-target="enemy-ai" data-enemy-id="${escapeHtml(enemy.id)}"></div>`,
-      ...this.config.floorRules.floors.map((rule) => {
-        const entry = rule.enemyTable.find((e) => e.enemyId === enemy.id);
+      ...this.config.floorRules.floors.map((floorRule) => {
+        const weightedEnemyEntry = floorRule.enemyTable.find((candidateEntry) => candidateEntry.enemyId === enemy.id);
         return this.numberInput(
-          `出現重み(${rule.id})`,
-          `enemy.${enemy.id}.weight.${rule.id}`,
-          entry?.weight ?? 0,
+          `出現重み(${floorRule.id})`,
+          `enemy.${enemy.id}.weight.${floorRule.id}`,
+          weightedEnemyEntry?.weight ?? 0,
           0,
         );
       }),
@@ -225,18 +225,18 @@ export class ConfigPanel {
   }
 
   private renderItem(item: ItemDefinition): string {
-    const prefix = `item.${item.id}`;
-    const effect = item.effects[0] ?? { effectId: "heal", params: { amount: 0 } };
-    const value = this.effectValue(effect.effectId, effect.params);
+    const itemFieldPrefix = `item.${item.id}`;
+    const primaryEffectDefinition = item.effects[0] ?? { effectId: "heal", params: { amount: 0 } };
+    const primaryEffectValue = this.effectValue(primaryEffectDefinition.effectId, primaryEffectDefinition.params);
     return [
       '<div class="config-group">',
       `<strong>${escapeHtml(item.name)}</strong>`,
-      this.checkboxInput("削除", `${prefix}.delete`, false),
-      this.textInput("名前", `${prefix}.name`, item.name),
-      this.textInput("見た目", `${prefix}.char`, item.char, 1),
-      this.colorInput("色", `${prefix}.color`, item.color),
-      this.selectInput("効果", `${prefix}.effectId`, effect.effectId, this.effectOptions),
-      this.numberInput("効果値", `${prefix}.amount`, value, 0),
+      this.checkboxInput("削除", `${itemFieldPrefix}.delete`, false),
+      this.textInput("名前", `${itemFieldPrefix}.name`, item.name),
+      this.textInput("見た目", `${itemFieldPrefix}.char`, item.char, 1),
+      this.colorInput("色", `${itemFieldPrefix}.color`, item.color),
+      this.selectInput("効果", `${itemFieldPrefix}.effectId`, primaryEffectDefinition.effectId, this.effectOptions),
+      this.numberInput("効果値", `${itemFieldPrefix}.amount`, primaryEffectValue, 0),
       "</div>",
     ].join("");
   }
@@ -246,25 +246,25 @@ export class ConfigPanel {
       '<fieldset><legend>階層ルール</legend>',
       this.numberInput("敵上限", "floorRules.maxEnemies", this.config.floorRules.maxEnemies, 0),
       this.numberInput("アイテム上限", "floorRules.maxItems", this.config.floorRules.maxItems, 0),
-      ...this.config.floorRules.floors.map((rule) => this.renderFloorRule(rule)),
+      ...this.config.floorRules.floors.map((floorRule) => this.renderFloorRule(floorRule)),
       "</fieldset>",
     ].join("");
   }
 
-  private renderFloorRule(rule: FloorRangeRule): string {
-    const prefix = `floor.${rule.id}`;
+  private renderFloorRule(floorRule: FloorRangeRule): string {
+    const floorRuleFieldPrefix = `floor.${floorRule.id}`;
     return [
       '<div class="config-group">',
-      `<strong>${escapeHtml(rule.id)}</strong>`,
-      this.numberInput("開始階", `${prefix}.fromFloor`, rule.fromFloor, 1),
-      this.numberInput("終了階", `${prefix}.toFloor`, rule.toFloor ?? 0, 0),
-      this.numberInput("敵数min", `${prefix}.enemyMin`, rule.enemyCount.min, 0),
-      this.numberInput("敵数max", `${prefix}.enemyMax`, rule.enemyCount.max, 0),
-      this.numberInput("敵HP/階", `${prefix}.hpBonus`, rule.enemyHpBonusPerFloor, 0),
-      this.numberInput("敵攻撃/階", `${prefix}.attackBonus`, rule.enemyAttackBonusPerFloor, 0),
+      `<strong>${escapeHtml(floorRule.id)}</strong>`,
+      this.numberInput("開始階", `${floorRuleFieldPrefix}.fromFloor`, floorRule.fromFloor, 1),
+      this.numberInput("終了階", `${floorRuleFieldPrefix}.toFloor`, floorRule.toFloor ?? 0, 0),
+      this.numberInput("敵数min", `${floorRuleFieldPrefix}.enemyMin`, floorRule.enemyCount.min, 0),
+      this.numberInput("敵数max", `${floorRuleFieldPrefix}.enemyMax`, floorRule.enemyCount.max, 0),
+      this.numberInput("敵HP/階", `${floorRuleFieldPrefix}.hpBonus`, floorRule.enemyHpBonusPerFloor, 0),
+      this.numberInput("敵攻撃/階", `${floorRuleFieldPrefix}.attackBonus`, floorRule.enemyAttackBonusPerFloor, 0),
       ...this.config.items.map((item) => {
-        const entry = rule.itemDrops.find((candidate) => candidate.itemId === item.id);
-        return this.numberInput(`${item.name}出現率%`, `${prefix}.itemChance.${item.id}`, Math.round((entry?.chance ?? 0) * 100), 0, 100);
+        const itemDropRule = floorRule.itemDrops.find((candidate) => candidate.itemId === item.id);
+        return this.numberInput(`${item.name}出現率%`, `${floorRuleFieldPrefix}.itemChance.${item.id}`, Math.round((itemDropRule?.chance ?? 0) * 100), 0, 100);
       }),
       "</div>",
     ].join("");
@@ -274,15 +274,15 @@ export class ConfigPanel {
     const coreTileTypes = new Set(["wall", "floor", "stairs"]);
     return [
       '<fieldset><legend>タイル</legend>',
-      ...Object.entries(this.config.tiles).map(([type, tile]) => [
+      ...Object.entries(this.config.tiles).map(([tileType, tileDefinition]) => [
         '<div class="config-group">',
-        `<strong>${escapeHtml(type)}</strong>`,
-        this.textInput("見た目", `tile.${type}.char`, tile.char, 1),
-        this.colorInput("文字色", `tile.${type}.color`, tile.color),
-        this.colorInput("背景色", `tile.${type}.background`, tile.background),
-        this.checkboxInput("通行不可", `tile.${type}.blocksMovement`, tile.blocksMovement),
-        !coreTileTypes.has(type)
-          ? this.numberInput("散布率%", `tile.${type}.scatterRate`, Math.round((tile.scatterRate ?? 0) * 100), 0, 100)
+        `<strong>${escapeHtml(tileType)}</strong>`,
+        this.textInput("見た目", `tile.${tileType}.char`, tileDefinition.char, 1),
+        this.colorInput("文字色", `tile.${tileType}.color`, tileDefinition.color),
+        this.colorInput("背景色", `tile.${tileType}.background`, tileDefinition.background),
+        this.checkboxInput("通行不可", `tile.${tileType}.blocksMovement`, tileDefinition.blocksMovement),
+        !coreTileTypes.has(tileType)
+          ? this.numberInput("散布率%", `tile.${tileType}.scatterRate`, Math.round((tileDefinition.scatterRate ?? 0) * 100), 0, 100)
           : "",
         "</div>",
       ].join("")),
@@ -302,15 +302,15 @@ export class ConfigPanel {
   private renderMessageSection(): string {
     return [
       '<fieldset><legend>ログ文言</legend>',
-      ...Object.entries(messageTemplates).map(([key, value]) => (
-        this.textInput(key, `message.${key}`, value)
+      ...Object.entries(messageTemplates).map(([messageKey, messageTemplate]) => (
+        this.textInput(messageKey, `message.${messageKey}`, messageTemplate)
       )),
       "</fieldset>",
     ].join("");
   }
 
   private renderProjectSection(): string {
-    const project = this.projectJson();
+    const projectJson = this.projectJson();
     const projectName = this.projectInfo.filePath ? this.basename(this.projectInfo.filePath) : "未保存の新規プロジェクト";
     const filePath = this.projectInfo.filePath ?? "未選択";
     const savedLabel = this.projectInfo.isDirty ? "未保存の変更あり" : "保存済み";
@@ -328,53 +328,53 @@ export class ConfigPanel {
       '<button class="config-secondary" type="button" data-action="reset-default-config">初期化</button>',
       "</div>",
       '<div class="project-help">新規: 初期設定の新しいプロジェクト / 開く: JSONファイル読込 / 保存: 現在のファイルへ保存 / 名前を付けて保存: 保存先を選択 / 初期化: 現在の設定だけ初期化</div>',
-      `<input type="hidden" name="project.original" value="${escapeHtml(project)}" />`,
-      `<label><span>JSON preview</span><textarea name="project.json" rows="8">${escapeHtml(project)}</textarea></label>`,
+      `<input type="hidden" name="project.original" value="${escapeHtml(projectJson)}" />`,
+      `<label><span>JSON preview</span><textarea name="project.json" rows="8">${escapeHtml(projectJson)}</textarea></label>`,
       "</fieldset>",
     ].join("");
   }
 
   private handleClick(event: MouseEvent): void {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
+    const clickedElement = event.target;
+    if (!(clickedElement instanceof HTMLElement)) return;
 
-    if (target.dataset.action === "new-project") {
+    if (clickedElement.dataset.action === "new-project") {
       void this.newProject();
       return;
     }
 
-    if (target.dataset.action === "open-project") {
+    if (clickedElement.dataset.action === "open-project") {
       void this.openProject();
       return;
     }
 
-    if (target.dataset.action === "reset-default-config") {
+    if (clickedElement.dataset.action === "reset-default-config") {
       void this.resetToDefaultProject();
       return;
     }
 
-    if (target.dataset.action === "save-project") {
-      const form = target.closest("form");
-      if (form instanceof HTMLFormElement) {
-        this.applyFormConfig(new FormData(form));
+    if (clickedElement.dataset.action === "save-project") {
+      const configForm = clickedElement.closest("form");
+      if (configForm instanceof HTMLFormElement) {
+        this.applyFormConfig(new FormData(configForm));
         void this.saveProject();
       }
       return;
     }
 
-    if (target.dataset.action === "save-project-as") {
-      const form = target.closest("form");
-      if (form instanceof HTMLFormElement) {
-        this.applyFormConfig(new FormData(form));
+    if (clickedElement.dataset.action === "save-project-as") {
+      const configForm = clickedElement.closest("form");
+      if (configForm instanceof HTMLFormElement) {
+        this.applyFormConfig(new FormData(configForm));
         void this.saveProjectAs();
       }
     }
   }
 
   private handleChange(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
-    if (target.name.startsWith("project.")) return;
+    const changedField = event.target;
+    if (!(changedField instanceof HTMLInputElement || changedField instanceof HTMLSelectElement || changedField instanceof HTMLTextAreaElement)) return;
+    if (changedField.name.startsWith("project.")) return;
 
     void this.markDirty();
   }
@@ -382,10 +382,10 @@ export class ConfigPanel {
   /** フォーム送信時にフォーム値またはJSON previewから設定を反映する。 */
   private handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
+    const submittedForm = event.target;
+    if (!(submittedForm instanceof HTMLFormElement)) return;
 
-    const formData = new FormData(form);
+    const formData = new FormData(submittedForm);
     const originalProject = this.stringValue(formData, "project.original", "");
     const submittedProject = this.stringValue(formData, "project.json", "");
     if (submittedProject !== originalProject) {
@@ -469,22 +469,22 @@ export class ConfigPanel {
     this.config.enemies = this.config.enemies
       .filter((enemy) => formData.get(`enemy.${enemy.id}.delete`) !== "on")
       .map((enemy) => {
-        const prefix = `enemy.${enemy.id}`;
-        enemy.name = this.stringValue(formData, `${prefix}.name`, enemy.name);
-        enemy.char = this.charValue(formData, `${prefix}.char`, enemy.char);
-        enemy.color = this.stringValue(formData, `${prefix}.color`, enemy.color);
-        enemy.maxHp = this.numberValue(formData, `${prefix}.maxHp`, enemy.maxHp);
-        enemy.attackPower = this.numberValue(formData, `${prefix}.attackPower`, enemy.attackPower);
-        enemy.expValue = this.numberValue(formData, `${prefix}.expValue`, enemy.expValue);
-        enemy.aiId = this.stringValue(formData, `${prefix}.aiId`, enemy.aiId);
+        const enemyFieldPrefix = `enemy.${enemy.id}`;
+        enemy.name = this.stringValue(formData, `${enemyFieldPrefix}.name`, enemy.name);
+        enemy.char = this.charValue(formData, `${enemyFieldPrefix}.char`, enemy.char);
+        enemy.color = this.stringValue(formData, `${enemyFieldPrefix}.color`, enemy.color);
+        enemy.maxHp = this.numberValue(formData, `${enemyFieldPrefix}.maxHp`, enemy.maxHp);
+        enemy.attackPower = this.numberValue(formData, `${enemyFieldPrefix}.attackPower`, enemy.attackPower);
+        enemy.expValue = this.numberValue(formData, `${enemyFieldPrefix}.expValue`, enemy.expValue);
+        enemy.aiId = this.stringValue(formData, `${enemyFieldPrefix}.aiId`, enemy.aiId);
         return enemy;
       });
 
-    const id = this.idValue(formData, "newEnemy.id");
-    if (id && !this.config.enemies.some((enemy) => enemy.id === id)) {
+    const newEnemyId = this.idValue(formData, "newEnemy.id");
+    if (newEnemyId && !this.config.enemies.some((enemy) => enemy.id === newEnemyId)) {
       this.config.enemies.push({
-        id,
-        name: this.stringValue(formData, "newEnemy.name", id),
+        id: newEnemyId,
+        name: this.stringValue(formData, "newEnemy.name", newEnemyId),
         char: this.charValue(formData, "newEnemy.char", "e"),
         color: this.stringValue(formData, "newEnemy.color", "#ffffff"),
         maxHp: this.numberValue(formData, "newEnemy.maxHp", 8),
@@ -492,7 +492,7 @@ export class ConfigPanel {
         expValue: this.numberValue(formData, "newEnemy.expValue", 4),
         aiId: this.stringValue(formData, "newEnemy.aiId", "chase"),
       });
-      this.addEnemyToFloorRules(id, this.numberValue(formData, "newEnemy.weight", 3));
+      this.addEnemyToFloorRules(newEnemyId, this.numberValue(formData, "newEnemy.weight", 3));
     }
   }
 
@@ -500,26 +500,26 @@ export class ConfigPanel {
     this.config.items = this.config.items
       .filter((item) => formData.get(`item.${item.id}.delete`) !== "on")
       .map((item) => {
-        const prefix = `item.${item.id}`;
-        const effectId = this.stringValue(formData, `${prefix}.effectId`, item.effects[0]?.effectId ?? "heal");
-        item.name = this.stringValue(formData, `${prefix}.name`, item.name);
-        item.char = this.charValue(formData, `${prefix}.char`, item.char);
-        item.color = this.stringValue(formData, `${prefix}.color`, item.color);
-        item.effects = [this.createEffect(effectId, this.numberValue(formData, `${prefix}.amount`, 0))];
+        const itemFieldPrefix = `item.${item.id}`;
+        const effectId = this.stringValue(formData, `${itemFieldPrefix}.effectId`, item.effects[0]?.effectId ?? "heal");
+        item.name = this.stringValue(formData, `${itemFieldPrefix}.name`, item.name);
+        item.char = this.charValue(formData, `${itemFieldPrefix}.char`, item.char);
+        item.color = this.stringValue(formData, `${itemFieldPrefix}.color`, item.color);
+        item.effects = [this.createEffect(effectId, this.numberValue(formData, `${itemFieldPrefix}.amount`, 0))];
         return item;
       });
 
-    const id = this.idValue(formData, "newItem.id");
-    if (id && !this.config.items.some((item) => item.id === id)) {
+    const newItemId = this.idValue(formData, "newItem.id");
+    if (newItemId && !this.config.items.some((item) => item.id === newItemId)) {
       const effectId = this.stringValue(formData, "newItem.effectId", "heal");
       this.config.items.push({
-        id,
-        name: this.stringValue(formData, "newItem.name", id),
+        id: newItemId,
+        name: this.stringValue(formData, "newItem.name", newItemId),
         char: this.charValue(formData, "newItem.char", "?"),
         color: this.stringValue(formData, "newItem.color", "#ffffff"),
         effects: [this.createEffect(effectId, this.numberValue(formData, "newItem.amount", 5))],
       });
-      this.addItemToFloorRules(id, this.numberValue(formData, "newItem.chance", 35) / 100);
+      this.addItemToFloorRules(newItemId, this.numberValue(formData, "newItem.chance", 35) / 100);
     }
   }
 
@@ -527,41 +527,41 @@ export class ConfigPanel {
     this.config.floorRules.maxEnemies = this.numberValue(formData, "floorRules.maxEnemies", this.config.floorRules.maxEnemies);
     this.config.floorRules.maxItems = this.numberValue(formData, "floorRules.maxItems", this.config.floorRules.maxItems);
 
-    for (const rule of this.config.floorRules.floors) {
-      const prefix = `floor.${rule.id}`;
-      rule.fromFloor = this.numberValue(formData, `${prefix}.fromFloor`, rule.fromFloor);
-      const toFloor = this.numberValue(formData, `${prefix}.toFloor`, rule.toFloor ?? 0);
-      rule.toFloor = toFloor > 0 ? toFloor : undefined;
-      rule.enemyCount.min = this.numberValue(formData, `${prefix}.enemyMin`, rule.enemyCount.min);
-      rule.enemyCount.max = Math.max(rule.enemyCount.min, this.numberValue(formData, `${prefix}.enemyMax`, rule.enemyCount.max));
-      rule.enemyHpBonusPerFloor = this.numberValue(formData, `${prefix}.hpBonus`, rule.enemyHpBonusPerFloor);
-      rule.enemyAttackBonusPerFloor = this.numberValue(formData, `${prefix}.attackBonus`, rule.enemyAttackBonusPerFloor);
-      rule.itemDrops = this.config.items
+    for (const floorRule of this.config.floorRules.floors) {
+      const floorRuleFieldPrefix = `floor.${floorRule.id}`;
+      floorRule.fromFloor = this.numberValue(formData, `${floorRuleFieldPrefix}.fromFloor`, floorRule.fromFloor);
+      const configuredToFloor = this.numberValue(formData, `${floorRuleFieldPrefix}.toFloor`, floorRule.toFloor ?? 0);
+      floorRule.toFloor = configuredToFloor > 0 ? configuredToFloor : undefined;
+      floorRule.enemyCount.min = this.numberValue(formData, `${floorRuleFieldPrefix}.enemyMin`, floorRule.enemyCount.min);
+      floorRule.enemyCount.max = Math.max(floorRule.enemyCount.min, this.numberValue(formData, `${floorRuleFieldPrefix}.enemyMax`, floorRule.enemyCount.max));
+      floorRule.enemyHpBonusPerFloor = this.numberValue(formData, `${floorRuleFieldPrefix}.hpBonus`, floorRule.enemyHpBonusPerFloor);
+      floorRule.enemyAttackBonusPerFloor = this.numberValue(formData, `${floorRuleFieldPrefix}.attackBonus`, floorRule.enemyAttackBonusPerFloor);
+      floorRule.itemDrops = this.config.items
         .map((item) => {
-          const current = rule.itemDrops.find((entry) => entry.itemId === item.id);
+          const existingItemDrop = floorRule.itemDrops.find((itemDrop) => itemDrop.itemId === item.id);
           return {
             itemId: item.id,
-            chance: this.numberValue(formData, `${prefix}.itemChance.${item.id}`, Math.round((current?.chance ?? 0) * 100)) / 100,
+            chance: this.numberValue(formData, `${floorRuleFieldPrefix}.itemChance.${item.id}`, Math.round((existingItemDrop?.chance ?? 0) * 100)) / 100,
           };
         })
-        .filter((entry) => entry.chance > 0);
+        .filter((itemDrop) => itemDrop.chance > 0);
     }
   }
 
   /** 敵セクションで編集した出現重みをフロアルールへ反映する。applyFloorRules の後に呼ぶ。 */
   private applyEnemyWeights(formData: FormData): void {
-    for (const rule of this.config.floorRules.floors) {
-      rule.enemyTable = this.config.enemies
+    for (const floorRule of this.config.floorRules.floors) {
+      floorRule.enemyTable = this.config.enemies
         .map((enemy) => {
-          const current = rule.enemyTable.find((e) => e.enemyId === enemy.id);
+          const existingEnemyEntry = floorRule.enemyTable.find((enemyEntry) => enemyEntry.enemyId === enemy.id);
           const weight = this.numberValue(
             formData,
-            `enemy.${enemy.id}.weight.${rule.id}`,
-            current?.weight ?? 0,
+            `enemy.${enemy.id}.weight.${floorRule.id}`,
+            existingEnemyEntry?.weight ?? 0,
           );
           return { enemyId: enemy.id, weight };
         })
-        .filter((entry) => entry.weight > 0);
+        .filter((enemyEntry) => enemyEntry.weight > 0);
     }
   }
 
@@ -569,9 +569,9 @@ export class ConfigPanel {
   private addEnemyToFloorRules(enemyId: string, weight: number): void {
     if (weight <= 0) return;
 
-    for (const rule of this.config.floorRules.floors) {
-      if (!rule.enemyTable.some((entry) => entry.enemyId === enemyId)) {
-        rule.enemyTable.push({ enemyId, weight });
+    for (const floorRule of this.config.floorRules.floors) {
+      if (!floorRule.enemyTable.some((enemyEntry) => enemyEntry.enemyId === enemyId)) {
+        floorRule.enemyTable.push({ enemyId, weight });
       }
     }
   }
@@ -580,29 +580,29 @@ export class ConfigPanel {
   private addItemToFloorRules(itemId: string, chance: number): void {
     if (chance <= 0) return;
 
-    for (const rule of this.config.floorRules.floors) {
-      if (!rule.itemDrops.some((entry) => entry.itemId === itemId)) {
-        rule.itemDrops.push({ itemId, chance });
+    for (const floorRule of this.config.floorRules.floors) {
+      if (!floorRule.itemDrops.some((itemDrop) => itemDrop.itemId === itemId)) {
+        floorRule.itemDrops.push({ itemId, chance });
       }
     }
   }
 
   private applyTiles(formData: FormData): void {
     const coreTileTypes = new Set(["wall", "floor", "stairs"]);
-    for (const [type, tile] of Object.entries(this.config.tiles)) {
-      tile.char = this.charValue(formData, `tile.${type}.char`, tile.char);
-      tile.color = this.stringValue(formData, `tile.${type}.color`, tile.color);
-      tile.background = this.stringValue(formData, `tile.${type}.background`, tile.background);
-      tile.blocksMovement = formData.get(`tile.${type}.blocksMovement`) === "on";
-      if (!coreTileTypes.has(type)) {
-        tile.scatterRate = this.numberValue(formData, `tile.${type}.scatterRate`, Math.round((tile.scatterRate ?? 0) * 100)) / 100;
+    for (const [tileType, tileDefinition] of Object.entries(this.config.tiles)) {
+      tileDefinition.char = this.charValue(formData, `tile.${tileType}.char`, tileDefinition.char);
+      tileDefinition.color = this.stringValue(formData, `tile.${tileType}.color`, tileDefinition.color);
+      tileDefinition.background = this.stringValue(formData, `tile.${tileType}.background`, tileDefinition.background);
+      tileDefinition.blocksMovement = formData.get(`tile.${tileType}.blocksMovement`) === "on";
+      if (!coreTileTypes.has(tileType)) {
+        tileDefinition.scatterRate = this.numberValue(formData, `tile.${tileType}.scatterRate`, Math.round((tileDefinition.scatterRate ?? 0) * 100)) / 100;
       }
     }
 
-    const id = this.idValue(formData, "newTile.id");
-    if (id && !this.config.tiles[id]) {
-      this.config.tiles[id] = {
-        type: id,
+    const newTileId = this.idValue(formData, "newTile.id");
+    if (newTileId && !this.config.tiles[newTileId]) {
+      this.config.tiles[newTileId] = {
+        type: newTileId,
         char: this.charValue(formData, "newTile.char", "?"),
         color: this.stringValue(formData, "newTile.color", "#ffffff"),
         background: this.stringValue(formData, "newTile.background", "#000000"),
@@ -613,8 +613,8 @@ export class ConfigPanel {
   }
 
   private applyMessages(formData: FormData): void {
-    for (const key of Object.keys(messageTemplates) as MessageKey[]) {
-      messageTemplates[key] = this.stringValue(formData, `message.${key}`, messageTemplates[key]);
+    for (const messageKey of Object.keys(messageTemplates) as MessageKey[]) {
+      messageTemplates[messageKey] = this.stringValue(formData, `message.${messageKey}`, messageTemplates[messageKey]);
     }
     this.applyMessageTemplates();
   }
@@ -641,67 +641,67 @@ export class ConfigPanel {
     this.config.messages.useStairsPrompt = () => messageTemplates.useStairsPrompt;
   }
 
-  private createEffect(effectId: string, amount: number): ItemDefinition["effects"][number] {
+  private createEffect(effectId: string, effectAmount: number): ItemDefinition["effects"][number] {
     return effectId === "equipWeapon"
-      ? { effectId, params: { atk: amount } }
-      : { effectId, params: { amount } };
+      ? { effectId, params: { atk: effectAmount } }
+      : { effectId, params: { amount: effectAmount } };
   }
 
   private effectValue(effectId: string, params: Record<string, number | string | boolean>): number {
-    const key = effectId === "equipWeapon" ? "atk" : "amount";
-    const value = params[key];
-    return typeof value === "number" ? value : 0;
+    const effectParamName = effectId === "equipWeapon" ? "atk" : "amount";
+    const effectParamValue = params[effectParamName];
+    return typeof effectParamValue === "number" ? effectParamValue : 0;
   }
 
-  private numberInput(label: string, name: string, value: number, min: number, max?: number): string {
+  private numberInput(label: string, fieldName: string, fieldValue: number, min: number, max?: number): string {
     const maxAttribute = max === undefined ? "" : ` max="${max}"`;
-    return `<label><span>${escapeHtml(label)}</span><input type="number" name="${escapeHtml(name)}" value="${value}" min="${min}" step="any"${maxAttribute} /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="number" name="${escapeHtml(fieldName)}" value="${fieldValue}" min="${min}" step="any"${maxAttribute} /></label>`;
   }
 
-  private textInput(label: string, name: string, value: string, maxLength?: number): string {
+  private textInput(label: string, fieldName: string, fieldValue: string, maxLength?: number): string {
     const maxLengthAttribute = maxLength === undefined ? "" : ` maxlength="${maxLength}"`;
-    return `<label><span>${escapeHtml(label)}</span><input type="text" name="${escapeHtml(name)}" value="${escapeHtml(value)}"${maxLengthAttribute} /></label>`;
+    return `<label><span>${escapeHtml(label)}</span><input type="text" name="${escapeHtml(fieldName)}" value="${escapeHtml(fieldValue)}"${maxLengthAttribute} /></label>`;
   }
 
-  private colorInput(label: string, name: string, value: string): string {
-    return `<label><span>${escapeHtml(label)}</span><input type="color" name="${escapeHtml(name)}" value="${escapeHtml(value)}" /></label>`;
+  private colorInput(label: string, fieldName: string, fieldValue: string): string {
+    return `<label><span>${escapeHtml(label)}</span><input type="color" name="${escapeHtml(fieldName)}" value="${escapeHtml(fieldValue)}" /></label>`;
   }
 
-  private checkboxInput(label: string, name: string, checked: boolean): string {
-    return `<label><span>${escapeHtml(label)}</span><input type="checkbox" name="${escapeHtml(name)}"${checked ? " checked" : ""} /></label>`;
+  private checkboxInput(label: string, fieldName: string, checked: boolean): string {
+    return `<label><span>${escapeHtml(label)}</span><input type="checkbox" name="${escapeHtml(fieldName)}"${checked ? " checked" : ""} /></label>`;
   }
 
-  private selectInput(label: string, name: string, value: string, options: string[]): string {
+  private selectInput(label: string, fieldName: string, selectedValue: string, options: string[]): string {
     const optionHtml = options
-      .map((option) => `<option value="${escapeHtml(option)}"${option === value ? " selected" : ""}>${escapeHtml(option)}</option>`)
+      .map((optionValue) => `<option value="${escapeHtml(optionValue)}"${optionValue === selectedValue ? " selected" : ""}>${escapeHtml(optionValue)}</option>`)
       .join("");
-    return `<label><span>${escapeHtml(label)}</span><select name="${escapeHtml(name)}">${optionHtml}</select></label>`;
+    return `<label><span>${escapeHtml(label)}</span><select name="${escapeHtml(fieldName)}">${optionHtml}</select></label>`;
   }
 
-  private numberValue(formData: FormData, name: string, fallback: number): number {
-    const raw = formData.get(name);
-    if (raw === null) return fallback;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : fallback;
+  private numberValue(formData: FormData, fieldName: string, fallback: number): number {
+    const rawFieldValue = formData.get(fieldName);
+    if (rawFieldValue === null) return fallback;
+    const numberValue = Number(rawFieldValue);
+    return Number.isFinite(numberValue) ? numberValue : fallback;
   }
 
-  private stringValue(formData: FormData, name: string, fallback: string): string {
-    const value = formData.get(name);
-    return typeof value === "string" && value.length > 0 ? value : fallback;
+  private stringValue(formData: FormData, fieldName: string, fallback: string): string {
+    const fieldValue = formData.get(fieldName);
+    return typeof fieldValue === "string" && fieldValue.length > 0 ? fieldValue : fallback;
   }
 
-  private charValue(formData: FormData, name: string, fallback: string): string {
-    return this.stringValue(formData, name, fallback).slice(0, 1) || fallback;
+  private charValue(formData: FormData, fieldName: string, fallback: string): string {
+    return this.stringValue(formData, fieldName, fallback).slice(0, 1) || fallback;
   }
 
-  private idValue(formData: FormData, name: string): string {
-    const value = this.stringValue(formData, name, "").trim();
-    return /^[a-zA-Z0-9_-]+$/.test(value) ? value : "";
+  private idValue(formData: FormData, fieldName: string): string {
+    const candidateId = this.stringValue(formData, fieldName, "").trim();
+    return /^[a-zA-Z0-9_-]+$/.test(candidateId) ? candidateId : "";
   }
 
   private interpolate(template: string, values: Record<string, string | number>): string {
-    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => (
-      values[key] === undefined ? match : String(values[key])
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, placeholderName: string) => (
+      values[placeholderName] === undefined ? match : String(values[placeholderName])
     ));
   }
 
@@ -724,15 +724,15 @@ export class ConfigPanel {
   private async openProject(): Promise<void> {
     if (!this.confirmDiscardUnsaved("未保存の変更があります。別のプロジェクトを開きますか？")) return;
 
-    const result = await this.storage.openProject();
-    if (result.canceled) return;
-    if (result.error || !result.json) {
-      this.updateProjectStatus(result.error ?? "プロジェクトを読み込めませんでした。");
+    const openResult = await this.storage.openProject();
+    if (openResult.canceled) return;
+    if (openResult.error || !openResult.json) {
+      this.updateProjectStatus(openResult.error ?? "プロジェクトを読み込めませんでした。");
       this.render();
       return;
     }
 
-    if (!this.importProject(result.json)) {
+    if (!this.importProject(openResult.json)) {
       await this.storage.discardPendingOpen();
       this.updateProjectStatus("プロジェクトJSONの形式が正しくありません。");
       this.render();
@@ -747,13 +747,13 @@ export class ConfigPanel {
   }
 
   private async saveProject(): Promise<void> {
-    const result = await this.storage.saveProject(this.projectJson());
-    this.handleSaveResult(result, "プロジェクトを保存しました。");
+    const saveResult = await this.storage.saveProject(this.projectJson());
+    this.handleSaveResult(saveResult, "プロジェクトを保存しました。");
   }
 
   private async saveProjectAs(): Promise<void> {
-    const result = await this.storage.saveProjectAs(this.projectJson());
-    this.handleSaveResult(result, "名前を付けて保存しました。");
+    const saveResult = await this.storage.saveProjectAs(this.projectJson());
+    this.handleSaveResult(saveResult, "名前を付けて保存しました。");
   }
 
   private async resetToDefaultProject(): Promise<void> {
@@ -767,30 +767,30 @@ export class ConfigPanel {
   }
 
   /** JSONを解析して GameConfig へ反映する。不正な形式なら false を返す。 */
-  private importProject(json: string): boolean {
+  private importProject(projectJson: string): boolean {
     try {
-      const parsed = JSON.parse(json) as Partial<GameConfig> & {
+      const parsedProject = JSON.parse(projectJson) as Partial<GameConfig> & {
         messageTemplates?: Partial<Record<MessageKey, string>>;
         schemaVersion?: number;
       };
-      if (typeof parsed !== "object" || parsed === null) {
+      if (typeof parsedProject !== "object" || parsedProject === null) {
         return false;
       }
-      const version = parsed.schemaVersion;
-      if (typeof version !== "number" || version > projectSchemaVersion) {
+      const loadedSchemaVersion = parsedProject.schemaVersion;
+      if (typeof loadedSchemaVersion !== "number" || loadedSchemaVersion > projectSchemaVersion) {
         return false;
       }
-      if (parsed.player) Object.assign(this.config.player, parsed.player);
-      if (parsed.dungeon) Object.assign(this.config.dungeon, parsed.dungeon);
-      if (parsed.tiles) this.config.tiles = parsed.tiles;
-      if (parsed.enemies) this.config.enemies = parsed.enemies;
-      if (parsed.items) this.config.items = parsed.items;
-      if (parsed.floorRules) this.config.floorRules = parsed.floorRules;
-      if (parsed.render) Object.assign(this.config.render, parsed.render);
-      if (parsed.fov) Object.assign(this.config.fov, parsed.fov);
-      if (parsed.progression) Object.assign(this.config.progression, parsed.progression);
-      if (parsed.messageTemplates) Object.assign(messageTemplates, parsed.messageTemplates);
-      if (version < projectSchemaVersion) {
+      if (parsedProject.player) Object.assign(this.config.player, parsedProject.player);
+      if (parsedProject.dungeon) Object.assign(this.config.dungeon, parsedProject.dungeon);
+      if (parsedProject.tiles) this.config.tiles = parsedProject.tiles;
+      if (parsedProject.enemies) this.config.enemies = parsedProject.enemies;
+      if (parsedProject.items) this.config.items = parsedProject.items;
+      if (parsedProject.floorRules) this.config.floorRules = parsedProject.floorRules;
+      if (parsedProject.render) Object.assign(this.config.render, parsedProject.render);
+      if (parsedProject.fov) Object.assign(this.config.fov, parsedProject.fov);
+      if (parsedProject.progression) Object.assign(this.config.progression, parsedProject.progression);
+      if (parsedProject.messageTemplates) Object.assign(messageTemplates, parsedProject.messageTemplates);
+      if (loadedSchemaVersion < projectSchemaVersion) {
         this.migrateFloorRuleCoverage();
       }
       this.applyMessageTemplates();
@@ -832,17 +832,17 @@ export class ConfigPanel {
     this.updateProjectStatusElement();
   }
 
-  private handleSaveResult(result: { canceled: boolean; filePath?: string | null; error?: string }, successMessage: string): void {
-    if (result.canceled) return;
+  private handleSaveResult(saveResult: { canceled: boolean; filePath?: string | null; error?: string }, successMessage: string): void {
+    if (saveResult.canceled) return;
 
-    if (result.error) {
-      this.updateProjectStatus(result.error);
+    if (saveResult.error) {
+      this.updateProjectStatus(saveResult.error);
       this.render();
       return;
     }
 
     this.projectInfo = {
-      filePath: result.filePath ?? null,
+      filePath: saveResult.filePath ?? null,
       isDirty: false,
     };
     this.updateProjectStatus(successMessage);
@@ -854,9 +854,9 @@ export class ConfigPanel {
   }
 
   private updateProjectStatusElement(): void {
-    const element = this.root.querySelector(".project-status");
-    if (element) {
-      element.textContent = this.projectStatus;
+    const projectStatusElement = this.root.querySelector(".project-status");
+    if (projectStatusElement) {
+      projectStatusElement.textContent = this.projectStatus;
     }
   }
 
@@ -866,32 +866,32 @@ export class ConfigPanel {
 
   /** 旧バージョンの JSON を読み込んだ時に、全敵・アイテムを階層ルールへ補完する。 */
   private migrateFloorRuleCoverage(): void {
-    for (const enemy of this.config.enemies) {
-      this.addEnemyToFloorRules(enemy.id, 1);
+    for (const enemyDefinition of this.config.enemies) {
+      this.addEnemyToFloorRules(enemyDefinition.id, 1);
     }
 
-    for (const item of this.config.items) {
-      this.addItemToFloorRules(item.id, 0.25);
+    for (const itemDefinition of this.config.items) {
+      this.addItemToFloorRules(itemDefinition.id, 0.25);
     }
   }
 
   /** 敵設定のマウントポイントにスクリプトエディタを生成して挿入する。 */
   private mountScriptEditors(): void {
     this.scriptEditors = [];
-    const mounts = this.root.querySelectorAll<HTMLElement>(".script-editor-mount");
-    for (const mount of mounts) {
-      const target = mount.dataset.scriptTarget;
-      const enemyId = mount.dataset.enemyId;
+    const scriptEditorMounts = this.root.querySelectorAll<HTMLElement>(".script-editor-mount");
+    for (const scriptEditorMount of scriptEditorMounts) {
+      const scriptTarget = scriptEditorMount.dataset.scriptTarget;
+      const enemyId = scriptEditorMount.dataset.enemyId;
 
-      if (target === "enemy-ai" && enemyId) {
-        const enemy = this.config.enemies.find((e) => e.id === enemyId);
-        if (!enemy) continue;
-        const script = enemy.aiScript ?? this.defaultAiScript(enemy.aiId);
-        const editor = new ScriptEditor(mount, script, () => {
-          enemy.aiScript = editor.getScript();
+      if (scriptTarget === "enemy-ai" && enemyId) {
+        const enemyDefinition = this.config.enemies.find((candidateEnemyDefinition) => candidateEnemyDefinition.id === enemyId);
+        if (!enemyDefinition) continue;
+        const aiScript = enemyDefinition.aiScript ?? this.defaultAiScript(enemyDefinition.aiId);
+        const scriptEditor = new ScriptEditor(scriptEditorMount, aiScript, () => {
+          enemyDefinition.aiScript = scriptEditor.getScript();
           void this.markDirty();
         });
-        this.scriptEditors.push(editor);
+        this.scriptEditors.push(scriptEditor);
       }
     }
   }

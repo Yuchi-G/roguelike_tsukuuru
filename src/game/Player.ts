@@ -25,12 +25,12 @@ export class Player extends Actor {
   public weapon: Equipment | null = null;
   public itemBag: BagItem[] = [];
 
-  constructor(x: number, y: number, stats: PlayerInitialStats) {
-    super(x, y, stats.char, stats.color, stats.name, stats.hp, stats.hp, stats.attackPower);
-    this.level = stats.level;
-    this.exp = stats.exp;
-    this.nextLevelExp = stats.nextLevelExp;
-    this.maxBagItems = stats.maxBagItems;
+  constructor(spawnX: number, spawnY: number, initialStats: PlayerInitialStats) {
+    super(spawnX, spawnY, initialStats.char, initialStats.color, initialStats.name, initialStats.hp, initialStats.hp, initialStats.attackPower);
+    this.level = initialStats.level;
+    this.exp = initialStats.exp;
+    this.nextLevelExp = initialStats.nextLevelExp;
+    this.maxBagItems = initialStats.maxBagItems;
   }
 
   get isBagFull(): boolean {
@@ -43,38 +43,38 @@ export class Player extends Actor {
   }
 
   /** バッグに回復アイテムを追加する。 */
-  addItem(item: BagItem): boolean {
+  addItem(bagItem: BagItem): boolean {
     if (this.isBagFull) {
       return false;
     }
 
-    this.itemBag.push(item);
+    this.itemBag.push(bagItem);
     return true;
   }
 
   /** 指定したバッグ内アイテムを捨てて、新しいアイテムを入れる。 */
-  replaceItemAt(index: number, item: BagItem): BagItem | null {
-    if (index < 0 || index >= this.itemBag.length) {
+  replaceItemAt(bagIndex: number, replacementBagItem: BagItem): BagItem | null {
+    if (bagIndex < 0 || bagIndex >= this.itemBag.length) {
       return null;
     }
 
-    const [dropped] = this.itemBag.splice(index, 1, item);
-    return dropped ?? null;
+    const [droppedBagItem] = this.itemBag.splice(bagIndex, 1, replacementBagItem);
+    return droppedBagItem ?? null;
   }
 
   /** 指定したバッグ内アイテムを取り出す。 */
-  takeBagItemAt(index: number): BagItem | null {
-    if (index < 0 || index >= this.itemBag.length) {
+  takeBagItemAt(bagIndex: number): BagItem | null {
+    if (bagIndex < 0 || bagIndex >= this.itemBag.length) {
       return null;
     }
 
-    const [item] = this.itemBag.splice(index, 1);
-    return item ?? null;
+    const [removedBagItem] = this.itemBag.splice(bagIndex, 1);
+    return removedBagItem ?? null;
   }
 
   /** 経験値が次のレベルに届いていれば、ステータスを伸ばしてレベルアップする。 */
   checkLevelUp(nextLevelMultiplier: number, hpGainPerLevel: number, attackGainPerLevel: number): number {
-    let levelUps = 0;
+    let completedLevelUps = 0;
 
     while (this.exp >= this.nextLevelExp) {
       this.exp -= this.nextLevelExp;
@@ -83,9 +83,9 @@ export class Player extends Actor {
       this.maxHp = Math.max(1, Math.round(this.maxHp + hpGainPerLevel));
       this.hp = this.maxHp;
       this.attackPower = Math.max(0, Math.round(this.attackPower + attackGainPerLevel));
-      levelUps += 1;
+      completedLevelUps += 1;
     }
 
-    return levelUps;
+    return completedLevelUps;
   }
 }

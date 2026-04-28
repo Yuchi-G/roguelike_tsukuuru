@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { GameMap } from "../../../src/engine/map/Map";
 import { Tile } from "../../../src/engine/map/Tile";
 
-function makeMap(w = 10, h = 10): GameMap {
-  return new GameMap(w, h, Tile.wall());
+function makeMap(mapWidth = 10, mapHeight = 10): GameMap {
+  return new GameMap(mapWidth, mapHeight, Tile.wall());
 }
 
 function floorTile(): Tile {

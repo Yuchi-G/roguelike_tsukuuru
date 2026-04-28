@@ -3,13 +3,13 @@ import { Fov } from "../../../src/engine/map/Fov";
 import { GameMap } from "../../../src/engine/map/Map";
 import { Tile } from "../../../src/engine/map/Tile";
 
-function makeFloorMap(w: number, h: number): GameMap {
+function makeFloorMap(mapWidth: number, mapHeight: number): GameMap {
   const floor = new Tile("floor", ".", "#888", "#000", false);
-  return new GameMap(w, h, floor);
+  return new GameMap(mapWidth, mapHeight, floor);
 }
 
-function setWall(map: GameMap, x: number, y: number): void {
-  map.setTile(x, y, Tile.wall());
+function setWall(map: GameMap, tileX: number, tileY: number): void {
+  map.setTile(tileX, tileY, Tile.wall());
 }
 
 describe("Fov.isVisible()", () => {

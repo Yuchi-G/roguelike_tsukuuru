@@ -36,9 +36,9 @@ const scene = new MainScene(game, sampleGameConfig);
 
 // --- カスタムアイテム効果登録 ---
 // fullHeal: 拾うとバッグに入り、使うとHPを最大まで回復する。
-game.itemEffectRegistry.register("fullHeal", ({ game: g, player, itemName, source }) => {
+game.itemEffectRegistry.register("fullHeal", ({ game: activeGame, player, itemName, source }) => {
   if (source === "pickup") {
-    g.offerBagItem({
+    activeGame.offerBagItem({
       name: itemName,
       effectId: "fullHeal",
       params: {},
@@ -47,7 +47,7 @@ game.itemEffectRegistry.register("fullHeal", ({ game: g, player, itemName, sourc
     return;
   }
   const healed = player.heal(player.maxHp);
-  g.logger.add(g.config.messages.itemUsed(itemName, healed));
+  activeGame.logger.add(activeGame.config.messages.itemUsed(itemName, healed));
 });
 let isEditingStartedGame = false;
 let configPanel: ConfigPanel;
@@ -63,7 +63,7 @@ function startOrRestartGame(): void {
     return;
   }
 
-  scene.load(1);
+  scene.loadDungeonFloor(1);
 }
 
 function returnToSetup(): void {
@@ -93,7 +93,7 @@ function quitGameToSetup(): void {
   configPanel.refresh();
 }
 
-game.setRestartHandler(() => scene.load());
+game.setRestartHandler(() => scene.loadDungeonFloor());
 game.setActionHandler(() => scene.goToNextFloor());
 game.setOpenConfigHandler(openConfigFromGame);
 game.setQuitGameHandler(quitGameToSetup);

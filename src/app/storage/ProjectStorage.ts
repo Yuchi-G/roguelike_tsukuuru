@@ -30,8 +30,8 @@ export interface ProjectStorage {
   confirmOpen(): Promise<ProjectInfo>;
   /** JSON 形式検証に失敗した後、main process 側で保留中のファイルパスを破棄する。 */
   discardPendingOpen(): Promise<ProjectInfo>;
-  saveProject(json: string): Promise<ProjectFileResult>;
-  saveProjectAs(json: string): Promise<ProjectFileResult>;
+  saveProject(projectJson: string): Promise<ProjectFileResult>;
+  saveProjectAs(projectJson: string): Promise<ProjectFileResult>;
   getCurrentProjectInfo(): Promise<ProjectInfo>;
   setDirty(isDirty: boolean): Promise<ProjectInfo>;
 }

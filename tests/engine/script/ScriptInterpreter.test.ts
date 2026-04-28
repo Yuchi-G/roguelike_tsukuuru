@@ -11,8 +11,8 @@ class TestActor extends Actor {
   update(_game: Game): void {}
 }
 
-function makeActor(x: number, y: number, hp = 10, maxHp = 20, atk = 5): TestActor {
-  return new TestActor(x, y, "@", "white", "TestActor", hp, maxHp, atk);
+function makeActor(actorX: number, actorY: number, hp = 10, maxHp = 20, attackPower = 5): TestActor {
+  return new TestActor(actorX, actorY, "@", "white", "TestActor", hp, maxHp, attackPower);
 }
 
 function makeFov(visible = true, visibleFrom = true): Fov {
@@ -53,15 +53,15 @@ function makeGame(overrides: Partial<Game> = {}): Game {
       },
     },
     attack: vi.fn(),
-    tryMoveActor: vi.fn(() => true),
+    tryMoveActorByDelta: vi.fn(() => true),
     offerBagItem: vi.fn(),
-    endGame: vi.fn(),
+    triggerGameOver: vi.fn(),
     ...overrides,
   } as unknown as Game;
 }
 
-function lit(value: number | string | boolean): ValueRef {
-  return { type: "literal", value };
+function literalValueRef(literalValue: number | string | boolean): ValueRef {
+  return { type: "literal", value: literalValue };
 }
 
 function script(body: ScriptNode[]): ScriptDefinition {
@@ -127,7 +127,7 @@ describe("evaluateCondition", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 5, 20);
-    const cond: Condition = { type: "compare", left: lit(5), op: "<", right: lit(10) };
+    const cond: Condition = { type: "compare", left: literalValueRef(5), op: "<", right: literalValueRef(10) };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
   });
 
@@ -139,7 +139,7 @@ describe("evaluateCondition", () => {
       type: "compare",
       left: { type: "stat", target: "self", stat: "hpPercent" },
       op: "<=",
-      right: lit(50),
+      right: literalValueRef(50),
     };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
   });
@@ -148,7 +148,7 @@ describe("evaluateCondition", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0);
-    const cond: Condition = { type: "compare", left: lit("hello"), op: "==", right: lit("hello") };
+    const cond: Condition = { type: "compare", left: literalValueRef("hello"), op: "==", right: literalValueRef("hello") };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
   });
 
@@ -188,7 +188,7 @@ describe("evaluateCondition", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(4, 5); // playerは(5,5)、距離1
-    const cond: Condition = { type: "inRange", target: "player", from: "self", distance: lit(1) };
+    const cond: Condition = { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(true);
   });
 
@@ -196,7 +196,7 @@ describe("evaluateCondition", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0); // playerは(5,5)、距離10
-    const cond: Condition = { type: "inRange", target: "player", from: "self", distance: lit(1) };
+    const cond: Condition = { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) };
     expect(interp.evaluateCondition(cond, { game, self })).toBe(false);
   });
 
@@ -256,7 +256,7 @@ describe("アクション: move", () => {
     const game = makeGame();
     const self = makeActor(3, 3);
     interp.run(script([actionNode({ type: "move", actor: "self", mode: { type: "random" } })]), { game, self });
-    expect(game.tryMoveActor).toHaveBeenCalledOnce();
+    expect(game.tryMoveActorByDelta).toHaveBeenCalledOnce();
   });
 
   it("toward でプレイヤーに近づく", () => {
@@ -264,7 +264,7 @@ describe("アクション: move", () => {
     const game = makeGame();
     const self = makeActor(2, 5); // playerは(5,5) → dx=3, dy=0 → 横優先
     interp.run(script([actionNode({ type: "move", actor: "self", mode: { type: "toward", target: "player" } })]), { game, self });
-    expect(game.tryMoveActor).toHaveBeenCalledWith(self, 1, 0);
+    expect(game.tryMoveActorByDelta).toHaveBeenCalledWith(self, 1, 0);
   });
 
   it("away でプレイヤーから逃げる", () => {
@@ -272,7 +272,7 @@ describe("アクション: move", () => {
     const game = makeGame();
     const self = makeActor(4, 5); // playerは(5,5) → dx=-1, dy=0 → 逃げる方向(-1,0)
     interp.run(script([actionNode({ type: "move", actor: "self", mode: { type: "away", target: "player" } })]), { game, self });
-    expect(game.tryMoveActor).toHaveBeenCalledWith(self, -1, 0);
+    expect(game.tryMoveActorByDelta).toHaveBeenCalledWith(self, -1, 0);
   });
 });
 
@@ -291,7 +291,7 @@ describe("アクション: damage / heal", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 15, 20);
-    interp.run(script([actionNode({ type: "damage", target: "self", amount: lit(5) })]), { game, self });
+    interp.run(script([actionNode({ type: "damage", target: "self", amount: literalValueRef(5) })]), { game, self });
     expect(self.hp).toBe(10);
   });
 
@@ -299,7 +299,7 @@ describe("アクション: damage / heal", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 10, 20);
-    interp.run(script([actionNode({ type: "heal", target: "self", amount: lit(8) })]), { game, self });
+    interp.run(script([actionNode({ type: "heal", target: "self", amount: literalValueRef(8) })]), { game, self });
     expect(self.hp).toBe(18);
   });
 });
@@ -310,7 +310,7 @@ describe("アクション: setVariable / addVariable", () => {
     const interp = new ScriptInterpreter(store);
     const game = makeGame();
     const self = makeActor(0, 0);
-    interp.run(script([actionNode({ type: "setVariable", scope: "global", name: "flag", value: lit(42) })]), { game, self });
+    interp.run(script([actionNode({ type: "setVariable", scope: "global", name: "flag", value: literalValueRef(42) })]), { game, self });
     expect(store.get("global", "flag")).toBe(42);
   });
 
@@ -320,7 +320,7 @@ describe("アクション: setVariable / addVariable", () => {
     const interp = new ScriptInterpreter(store);
     const game = makeGame();
     const self = makeActor(0, 0);
-    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "count", op: "+", value: lit(5) })]), { game, self });
+    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "count", op: "+", value: literalValueRef(5) })]), { game, self });
     expect(store.get("global", "count")).toBe(15);
   });
 
@@ -330,7 +330,7 @@ describe("アクション: setVariable / addVariable", () => {
     const interp = new ScriptInterpreter(store);
     const game = makeGame();
     const self = makeActor(0, 0);
-    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "count", op: "*", value: lit(3) })]), { game, self });
+    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "count", op: "*", value: literalValueRef(3) })]), { game, self });
     expect(store.get("global", "count")).toBe(12);
   });
 
@@ -340,7 +340,7 @@ describe("アクション: setVariable / addVariable", () => {
     const interp = new ScriptInterpreter(store);
     const game = makeGame();
     const self = makeActor(0, 0);
-    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "x", op: "/", value: lit(0) })]), { game, self });
+    interp.run(script([actionNode({ type: "addVariable", scope: "global", name: "x", op: "/", value: literalValueRef(0) })]), { game, self });
     expect(store.get("global", "x")).toBe(0);
   });
 });
@@ -350,7 +350,7 @@ describe("アクション: setStat", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 10, 20);
-    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "hp", value: lit(5) })]), { game, self });
+    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "hp", value: literalValueRef(5) })]), { game, self });
     expect(self.hp).toBe(5);
   });
 
@@ -358,7 +358,7 @@ describe("アクション: setStat", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 10, 20);
-    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "hp", value: lit(999) })]), { game, self });
+    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "hp", value: literalValueRef(999) })]), { game, self });
     expect(self.hp).toBe(20);
   });
 
@@ -366,7 +366,7 @@ describe("アクション: setStat", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 10, 20, 5);
-    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "atk", value: lit(12) })]), { game, self });
+    interp.run(script([actionNode({ type: "setStat", target: "self", stat: "atk", value: literalValueRef(12) })]), { game, self });
     expect(self.attackPower).toBe(12);
   });
 });
@@ -376,7 +376,7 @@ describe("アクション: offerBagItem", () => {
     const interp = new ScriptInterpreter();
     const healScript: ScriptDefinition = {
       id: "custom-heal", name: "custom heal", trigger: "itemEffect", variables: [],
-      body: [actionNode({ type: "heal", target: "player", amount: lit(99) })],
+      body: [actionNode({ type: "heal", target: "player", amount: literalValueRef(99) })],
     };
     const game = makeGame({
       config: {
@@ -465,7 +465,7 @@ describe("アクション: doNothing / endGame", () => {
     const self = makeActor(0, 0);
     interp.run(script([actionNode({ type: "doNothing" })]), { game, self });
     expect(game.attack).not.toHaveBeenCalled();
-    expect(game.tryMoveActor).not.toHaveBeenCalled();
+    expect(game.tryMoveActorByDelta).not.toHaveBeenCalled();
   });
 
   it("endGameでゲームを終了する", () => {
@@ -473,7 +473,7 @@ describe("アクション: doNothing / endGame", () => {
     const game = makeGame();
     const self = makeActor(0, 0);
     interp.run(script([actionNode({ type: "endGame" })]), { game, self });
-    expect(game.endGame).toHaveBeenCalledOnce();
+    expect(game.triggerGameOver).toHaveBeenCalledOnce();
   });
 });
 
@@ -487,8 +487,8 @@ describe("制御フロー: if", () => {
     interp.run(script([{
       type: "if",
       condition: { type: "true" },
-      then: [actionNode({ type: "damage", target: "self", amount: lit(3) })],
-      else: [actionNode({ type: "heal", target: "self", amount: lit(5) })],
+      then: [actionNode({ type: "damage", target: "self", amount: literalValueRef(3) })],
+      else: [actionNode({ type: "heal", target: "self", amount: literalValueRef(5) })],
     }]), { game, self });
     expect(self.hp).toBe(12); // damage 3
   });
@@ -500,8 +500,8 @@ describe("制御フロー: if", () => {
     interp.run(script([{
       type: "if",
       condition: { type: "false" },
-      then: [actionNode({ type: "damage", target: "self", amount: lit(3) })],
-      else: [actionNode({ type: "heal", target: "self", amount: lit(5) })],
+      then: [actionNode({ type: "damage", target: "self", amount: literalValueRef(3) })],
+      else: [actionNode({ type: "heal", target: "self", amount: literalValueRef(5) })],
     }]), { game, self });
     expect(self.hp).toBe(20); // heal 5
   });
@@ -513,7 +513,7 @@ describe("制御フロー: if", () => {
     interp.run(script([{
       type: "if",
       condition: { type: "false" },
-      then: [actionNode({ type: "damage", target: "self", amount: lit(3) })],
+      then: [actionNode({ type: "damage", target: "self", amount: literalValueRef(3) })],
     }]), { game, self });
     expect(self.hp).toBe(15);
   });
@@ -527,8 +527,8 @@ describe("制御フロー: loop", () => {
     const self = makeActor(0, 0);
     interp.run(script([{
       type: "loop",
-      count: lit(5),
-      body: [actionNode({ type: "addVariable", scope: "global", name: "counter", op: "+", value: lit(1) })],
+      count: literalValueRef(5),
+      body: [actionNode({ type: "addVariable", scope: "global", name: "counter", op: "+", value: literalValueRef(1) })],
     }]), { game, self });
     expect(store.get("global", "counter")).toBe(5);
   });
@@ -540,8 +540,8 @@ describe("制御フロー: loop", () => {
     const self = makeActor(0, 0);
     interp.run(script([{
       type: "loop",
-      count: lit(0),
-      body: [actionNode({ type: "setVariable", scope: "global", name: "flag", value: lit(1) })],
+      count: literalValueRef(0),
+      body: [actionNode({ type: "setVariable", scope: "global", name: "flag", value: literalValueRef(1) })],
     }]), { game, self });
     expect(store.get("global", "flag")).toBe(0);
   });
@@ -553,12 +553,12 @@ describe("制御フロー: loop", () => {
     const self = makeActor(0, 0);
     interp.run(script([{
       type: "loop",
-      count: lit(100),
+      count: literalValueRef(100),
       body: [
-        actionNode({ type: "addVariable", scope: "global", name: "counter", op: "+", value: lit(1) }),
+        actionNode({ type: "addVariable", scope: "global", name: "counter", op: "+", value: literalValueRef(1) }),
         {
           type: "if",
-          condition: { type: "compare", left: { type: "variable", scope: "global", name: "counter" }, op: ">=", right: lit(3) },
+          condition: { type: "compare", left: { type: "variable", scope: "global", name: "counter" }, op: ">=", right: literalValueRef(3) },
           then: [{ type: "break" }],
         },
       ],
@@ -575,8 +575,8 @@ describe("制御フロー: while", () => {
     const self = makeActor(0, 0);
     interp.run(script([{
       type: "while",
-      condition: { type: "compare", left: { type: "variable", scope: "global", name: "x" }, op: "<", right: lit(5) },
-      body: [actionNode({ type: "addVariable", scope: "global", name: "x", op: "+", value: lit(1) })],
+      condition: { type: "compare", left: { type: "variable", scope: "global", name: "x" }, op: "<", right: literalValueRef(5) },
+      body: [actionNode({ type: "addVariable", scope: "global", name: "x", op: "+", value: literalValueRef(1) })],
     }]), { game, self });
     expect(store.get("global", "x")).toBe(5);
   });
@@ -589,8 +589,8 @@ describe("制御フロー: while", () => {
     const self = makeActor(0, 0);
     interp.run(script([{
       type: "while",
-      condition: { type: "compare", left: { type: "variable", scope: "global", name: "x" }, op: "<", right: lit(5) },
-      body: [actionNode({ type: "setVariable", scope: "global", name: "flag", value: lit(1) })],
+      condition: { type: "compare", left: { type: "variable", scope: "global", name: "x" }, op: "<", right: literalValueRef(5) },
+      body: [actionNode({ type: "setVariable", scope: "global", name: "flag", value: literalValueRef(1) })],
     }]), { game, self });
     expect(store.get("global", "flag")).toBe(0);
   });
@@ -607,7 +607,7 @@ describe("変数スコープ", () => {
     const s: ScriptDefinition = {
       id: "test", name: "test", trigger: "ai",
       variables: [{ name: "local_var", scope: "local", initialValue: 99 }],
-      body: [actionNode({ type: "addVariable", scope: "local", name: "local_var", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "local", name: "local_var", op: "+", value: literalValueRef(1) })],
     };
     interp.run(s, { game, self });
     // ローカルはrun内で初期化→加算→runの最後にclearLocalされる前の値
@@ -623,7 +623,7 @@ describe("変数スコープ", () => {
     const s: ScriptDefinition = {
       id: "test", name: "test", trigger: "ai",
       variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
-      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: literalValueRef(1) })],
     };
 
     interp.run(s, { game, self: enemy });
@@ -644,7 +644,7 @@ describe("変数スコープ", () => {
     const s: ScriptDefinition = {
       id: "test", name: "test", trigger: "ai",
       variables: [{ name: "total", scope: "global", initialValue: 0 }],
-      body: [actionNode({ type: "addVariable", scope: "global", name: "total", op: "+", value: lit(10) })],
+      body: [actionNode({ type: "addVariable", scope: "global", name: "total", op: "+", value: literalValueRef(10) })],
     };
 
     interp.run(s, { game, self });
@@ -662,7 +662,7 @@ describe("変数スコープ", () => {
     const s: ScriptDefinition = {
       id: "test", name: "test", trigger: "ai",
       variables: [{ name: "tmp", scope: "local", initialValue: 0 }],
-      body: [actionNode({ type: "addVariable", scope: "local", name: "tmp", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "local", name: "tmp", op: "+", value: literalValueRef(1) })],
     };
 
     interp.run(s, { game, self });
@@ -681,7 +681,7 @@ describe("変数スコープ", () => {
     const s: ScriptDefinition = {
       id: "test", name: "test", trigger: "ai",
       variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
-      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: literalValueRef(1) })],
     };
 
     interp.run(s, { game, self: enemy1 });
@@ -698,7 +698,7 @@ describe("変数スコープ", () => {
     const game = makeGame();
     const enemy1 = makeActor(0, 0);
     const enemy2 = makeActor(1, 1);
-    const s = script([actionNode({ type: "addVariable", scope: "entity", name: "turns", op: "+", value: lit(1) })]);
+    const s = script([actionNode({ type: "addVariable", scope: "entity", name: "turns", op: "+", value: literalValueRef(1) })]);
 
     interp.run(s, { game, self: enemy1 });
     interp.run(s, { game, self: enemy1 });
@@ -716,9 +716,9 @@ describe("resolveValue", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0);
-    expect(interp.resolveValue(lit(42), { game, self })).toBe(42);
-    expect(interp.resolveValue(lit("hello"), { game, self })).toBe("hello");
-    expect(interp.resolveValue(lit(true), { game, self })).toBe(true);
+    expect(interp.resolveValue(literalValueRef(42), { game, self })).toBe(42);
+    expect(interp.resolveValue(literalValueRef("hello"), { game, self })).toBe("hello");
+    expect(interp.resolveValue(literalValueRef(true), { game, self })).toBe(true);
   });
 
   it("variable: 変数ストアから値を取得", () => {
@@ -765,14 +765,14 @@ describe("既存AI動作の再現", () => {
 
     const chaseScript = script([{
       type: "if",
-      condition: { type: "inRange", target: "player", from: "self", distance: lit(1) },
+      condition: { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) },
       then: [actionNode({ type: "attack", attacker: "self", defender: "player" })],
       else: [actionNode({ type: "move", actor: "self", mode: { type: "toward", target: "player" } })],
     }]);
 
     interp.run(chaseScript, { game, self });
     expect(game.attack).toHaveBeenCalledWith(self, game.player);
-    expect(game.tryMoveActor).not.toHaveBeenCalled();
+    expect(game.tryMoveActorByDelta).not.toHaveBeenCalled();
   });
 
   it("chase: 離れている時に近づく", () => {
@@ -782,14 +782,14 @@ describe("既存AI動作の再現", () => {
 
     const chaseScript = script([{
       type: "if",
-      condition: { type: "inRange", target: "player", from: "self", distance: lit(1) },
+      condition: { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) },
       then: [actionNode({ type: "attack", attacker: "self", defender: "player" })],
       else: [actionNode({ type: "move", actor: "self", mode: { type: "toward", target: "player" } })],
     }]);
 
     interp.run(chaseScript, { game, self });
     expect(game.attack).not.toHaveBeenCalled();
-    expect(game.tryMoveActor).toHaveBeenCalled();
+    expect(game.tryMoveActorByDelta).toHaveBeenCalled();
   });
 
   it("flee: HP50%以下で逃走する", () => {
@@ -803,13 +803,13 @@ describe("既存AI動作の再現", () => {
         type: "compare",
         left: { type: "stat", target: "self", stat: "hpPercent" },
         op: "<=",
-        right: lit(50),
+        right: literalValueRef(50),
       },
       then: [actionNode({ type: "move", actor: "self", mode: { type: "away", target: "player" } })],
       else: [
         {
           type: "if",
-          condition: { type: "inRange", target: "player", from: "self", distance: lit(1) },
+          condition: { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) },
           then: [actionNode({ type: "attack", attacker: "self", defender: "player" })],
           else: [actionNode({ type: "move", actor: "self", mode: { type: "toward", target: "player" } })],
         },
@@ -818,7 +818,7 @@ describe("既存AI動作の再現", () => {
 
     interp.run(fleeScript, { game, self });
     expect(game.attack).not.toHaveBeenCalled();
-    expect(game.tryMoveActor).toHaveBeenCalledWith(self, -1, 0); // 逃げる方向
+    expect(game.tryMoveActorByDelta).toHaveBeenCalledWith(self, -1, 0); // 逃げる方向
   });
 
   it("flee: HP十分なら攻撃する", () => {
@@ -832,13 +832,13 @@ describe("既存AI動作の再現", () => {
         type: "compare",
         left: { type: "stat", target: "self", stat: "hpPercent" },
         op: "<=",
-        right: lit(50),
+        right: literalValueRef(50),
       },
       then: [actionNode({ type: "move", actor: "self", mode: { type: "away", target: "player" } })],
       else: [
         {
           type: "if",
-          condition: { type: "inRange", target: "player", from: "self", distance: lit(1) },
+          condition: { type: "inRange", target: "player", from: "self", distance: literalValueRef(1) },
           then: [actionNode({ type: "attack", attacker: "self", defender: "player" })],
           else: [actionNode({ type: "move", actor: "self", mode: { type: "toward", target: "player" } })],
         },
@@ -855,7 +855,7 @@ describe("既存AI動作の再現", () => {
     const self = makeActor(0, 0);
     interp.run(script([actionNode({ type: "doNothing" })]), { game, self });
     expect(game.attack).not.toHaveBeenCalled();
-    expect(game.tryMoveActor).not.toHaveBeenCalled();
+    expect(game.tryMoveActorByDelta).not.toHaveBeenCalled();
   });
 });
 
@@ -870,7 +870,7 @@ describe("無限ループ防止", () => {
     interp.run(script([{
       type: "while",
       condition: { type: "true" },
-      body: [actionNode({ type: "addVariable", scope: "global", name: "x", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "global", name: "x", op: "+", value: literalValueRef(1) })],
     }]), { game, self });
     // MAX_ITERATIONS=1000 なので1000で止まる
     expect(store.get("global", "x")).toBe(1000);
@@ -886,13 +886,13 @@ describe("無限ループ防止", () => {
     interp.run(script([{
       type: "while",
       condition: { type: "true" },
-      body: [actionNode({ type: "addVariable", scope: "global", name: "a", op: "+", value: lit(1) })],
+      body: [actionNode({ type: "addVariable", scope: "global", name: "a", op: "+", value: literalValueRef(1) })],
     }]), { game, self });
 
     // 2回目: リセットされていれば正常に実行できる
     store.set("global", "b", 0);
     interp.run(script([
-      actionNode({ type: "setVariable", scope: "global", name: "b", value: lit(42) }),
+      actionNode({ type: "setVariable", scope: "global", name: "b", value: literalValueRef(42) }),
     ]), { game, self });
 
     expect(store.get("global", "b")).toBe(42);

@@ -48,6 +48,19 @@ export class VariableStore {
     }
   }
 
+  has(scope: VariableScope, name: string, entityId?: string): boolean {
+    switch (scope) {
+      case "global":
+        return this.global.has(name);
+      case "entity": {
+        const id = entityId ?? "";
+        return this.entity.get(id)?.has(name) ?? false;
+      }
+      case "local":
+        return this.local.has(name);
+    }
+  }
+
   set(scope: VariableScope, name: string, value: ScriptValue, entityId?: string): void {
     switch (scope) {
       case "global":
@@ -108,7 +121,9 @@ export class ScriptInterpreter {
     this.variables.clearLocal();
 
     for (const variable of script.variables) {
-      this.variables.set(variable.scope, variable.name, variable.initialValue, context.self.id);
+      if (variable.scope === "local" || !this.variables.has(variable.scope, variable.name, context.self.id)) {
+        this.variables.set(variable.scope, variable.name, variable.initialValue, context.self.id);
+      }
     }
 
     this.executeNodes(script.body, context);

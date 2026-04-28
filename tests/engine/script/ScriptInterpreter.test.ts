@@ -98,6 +98,21 @@ describe("VariableStore", () => {
     expect(store.get("entity", "nonexistent", "any")).toBe(0);
     expect(store.get("local", "nonexistent")).toBe(0);
   });
+
+  it("has: 変数の存在を確認できる", () => {
+    const store = new VariableStore();
+    expect(store.has("global", "flag")).toBe(false);
+    store.set("global", "flag", 1);
+    expect(store.has("global", "flag")).toBe(true);
+  });
+
+  it("has: エンティティ変数はIDごとに判定される", () => {
+    const store = new VariableStore();
+    expect(store.has("entity", "count", "enemy-a")).toBe(false);
+    store.set("entity", "count", 10, "enemy-a");
+    expect(store.has("entity", "count", "enemy-a")).toBe(true);
+    expect(store.has("entity", "count", "enemy-b")).toBe(false);
+  });
 });
 
 // ========================== 条件評価 ==========================
@@ -507,6 +522,83 @@ describe("変数スコープ", () => {
     // ローカルはrun内で初期化→加算→runの最後にclearLocalされる前の値
     // 実際にはclearLocalはrunの最初なので、次のrunで99に戻る
     expect(store.get("local", "local_var")).toBe(100);
+  });
+
+  it("entity変数は複数回のrunで初期値に戻らない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const enemy = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(1);
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(2);
+
+    interp.run(s, { game, self: enemy });
+    expect(store.get("entity", "counter", enemy.id)).toBe(3);
+  });
+
+  it("global変数は複数回のrunで初期値に戻らない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const self = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "total", scope: "global", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "global", name: "total", op: "+", value: lit(10) })],
+    };
+
+    interp.run(s, { game, self });
+    expect(store.get("global", "total")).toBe(10);
+
+    interp.run(s, { game, self });
+    expect(store.get("global", "total")).toBe(20);
+  });
+
+  it("local変数は毎回初期値に戻る", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const self = makeActor(0, 0);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "tmp", scope: "local", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "local", name: "tmp", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self });
+    interp.run(s, { game, self });
+    interp.run(s, { game, self });
+    // localは毎回0から+1なので常に1
+    expect(store.get("local", "tmp")).toBe(1);
+  });
+
+  it("別エンティティのentity変数は互いに影響しない", () => {
+    const store = new VariableStore();
+    const interp = new ScriptInterpreter(store);
+    const game = makeGame();
+    const enemy1 = makeActor(0, 0);
+    const enemy2 = makeActor(1, 1);
+    const s: ScriptDefinition = {
+      id: "test", name: "test", trigger: "ai",
+      variables: [{ name: "counter", scope: "entity", initialValue: 0 }],
+      body: [actionNode({ type: "addVariable", scope: "entity", name: "counter", op: "+", value: lit(1) })],
+    };
+
+    interp.run(s, { game, self: enemy1 });
+    interp.run(s, { game, self: enemy1 });
+    interp.run(s, { game, self: enemy2 });
+
+    expect(store.get("entity", "counter", enemy1.id)).toBe(2);
+    expect(store.get("entity", "counter", enemy2.id)).toBe(1);
   });
 
   it("エンティティ変数はエンティティ間で独立", () => {

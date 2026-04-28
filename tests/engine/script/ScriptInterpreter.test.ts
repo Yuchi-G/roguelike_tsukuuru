@@ -371,6 +371,69 @@ describe("アクション: setStat", () => {
   });
 });
 
+describe("アクション: offerBagItem", () => {
+  it("effectScript付きアイテムはuseScriptとしてBagItemに渡される", () => {
+    const interp = new ScriptInterpreter();
+    const healScript: ScriptDefinition = {
+      id: "custom-heal", name: "custom heal", trigger: "itemEffect", variables: [],
+      body: [actionNode({ type: "heal", target: "player", amount: lit(99) })],
+    };
+    const game = makeGame({
+      config: {
+        items: [
+          {
+            id: "magic-herb",
+            name: "魔法の草",
+            char: "!",
+            color: "green",
+            effects: [{ effectId: "heal", params: { amount: 10 } }],
+            effectScript: healScript,
+          },
+        ],
+        fov: { radius: 8 },
+        messages: {
+          weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
+        },
+      },
+    } as unknown as Partial<Game>);
+    const self = makeActor(0, 0);
+    interp.run(script([actionNode({ type: "offerBagItem", itemId: "magic-herb" })]), { game, self });
+
+    expect(game.offerBagItem).toHaveBeenCalledOnce();
+    const bagItem = (game.offerBagItem as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(bagItem.name).toBe("魔法の草");
+    expect(bagItem.useScript).toBe(healScript);
+  });
+
+  it("effectScriptなしアイテムはuseScriptがundefined", () => {
+    const interp = new ScriptInterpreter();
+    const game = makeGame({
+      config: {
+        items: [
+          {
+            id: "potion",
+            name: "回復薬",
+            char: "!",
+            color: "red",
+            effects: [{ effectId: "heal", params: { amount: 20 } }],
+          },
+        ],
+        fov: { radius: 8 },
+        messages: {
+          weaponEquipped: vi.fn((name: string, atk: number) => `${name} ATK+${atk}`),
+        },
+      },
+    } as unknown as Partial<Game>);
+    const self = makeActor(0, 0);
+    interp.run(script([actionNode({ type: "offerBagItem", itemId: "potion" })]), { game, self });
+
+    expect(game.offerBagItem).toHaveBeenCalledOnce();
+    const bagItem = (game.offerBagItem as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(bagItem.name).toBe("回復薬");
+    expect(bagItem.useScript).toBeUndefined();
+  });
+});
+
 describe("アクション: log", () => {
   it("メッセージがロガーに追加される", () => {
     const interp = new ScriptInterpreter();

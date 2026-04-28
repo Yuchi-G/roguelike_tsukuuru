@@ -343,6 +343,7 @@ export class ScriptInterpreter {
             effectId: effect?.effectId ?? "",
             params: effect?.params ?? {},
             description: effect?.effectId === "equipWeapon" ? `ATK +${paramValue}` : `HP +${paramValue}`,
+            useScript: itemDef.effectScript,
           });
         }
         return;

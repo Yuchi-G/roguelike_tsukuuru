@@ -14,15 +14,15 @@ export class Enemy extends Actor {
   public expValue: number;
 
   constructor(
-    x: number,
-    y: number,
+    spawnX: number,
+    spawnY: number,
     public definition: EnemyDefinition,
     hpBonus = 0,
     attackBonus = 0,
   ) {
-    const maxHp = Math.max(1, Math.round(definition.maxHp + hpBonus));
-    const attackPower = Math.max(0, Math.round(definition.attackPower + attackBonus));
-    super(x, y, definition.char, definition.color, definition.name, maxHp, maxHp, attackPower);
+    const maxHpWithFloorBonus = Math.max(1, Math.round(definition.maxHp + hpBonus));
+    const attackPowerWithFloorBonus = Math.max(0, Math.round(definition.attackPower + attackBonus));
+    super(spawnX, spawnY, definition.char, definition.color, definition.name, maxHpWithFloorBonus, maxHpWithFloorBonus, attackPowerWithFloorBonus);
     this.expValue = definition.expValue;
   }
 
@@ -32,9 +32,9 @@ export class Enemy extends Actor {
 
   /** AI 行動。スクリプト優先、なければレジストリにフォールバック。 */
   override update(game: Game): void {
-    const script = this.definition.aiScript;
-    if (script) {
-      game.scriptInterpreter.run(script, { game, self: this, target: game.player });
+    const aiScript = this.definition.aiScript;
+    if (aiScript) {
+      game.scriptInterpreter.run(aiScript, { game, self: this, target: game.player });
       return;
     }
     game.aiRegistry.run(this.definition.aiId, { game, enemy: this });

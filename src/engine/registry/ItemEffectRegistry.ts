@@ -24,28 +24,28 @@ export type ItemEffectHandler = (context: ItemEffectContext) => void;
 
 /** 効果ハンドラをID文字列で管理するレジストリ。 */
 export class ItemEffectRegistry {
-  private handlers = new Map<string, ItemEffectHandler>();
+  private itemEffectHandlersById = new Map<string, ItemEffectHandler>();
 
   /** 効果処理をIDと紐づけて登録する。 */
-  register(id: string, handler: ItemEffectHandler): void {
-    this.handlers.set(id, handler);
+  register(effectId: string, effectHandler: ItemEffectHandler): void {
+    this.itemEffectHandlersById.set(effectId, effectHandler);
   }
 
   /** 登録済みの効果処理をIDで検索し、実行する。 */
-  run(id: string, context: ItemEffectContext): void {
-    const handler = this.handlers.get(id);
-    if (!handler) {
-      throw new Error(`Unknown item effect: ${id}`);
+  run(effectId: string, context: ItemEffectContext): void {
+    const effectHandler = this.itemEffectHandlersById.get(effectId);
+    if (!effectHandler) {
+      throw new Error(`Unknown item effect: ${effectId}`);
     }
 
-    handler(context);
+    effectHandler(context);
   }
 }
 
 /** params から数値パラメータを安全に取り出す。 */
-export function numberParam(params: EffectParams, key: string, fallback = 0): number {
-  const value = params[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+export function numberEffectParam(effectParams: EffectParams, paramName: string, fallback = 0): number {
+  const paramValue = effectParams[paramName];
+  return typeof paramValue === "number" && Number.isFinite(paramValue) ? paramValue : fallback;
 }
 
 /** 標準効果（heal / equipWeapon）を登録済みのレジストリを生成する。 */
@@ -54,40 +54,40 @@ export function createDefaultItemEffectRegistry(): ItemEffectRegistry {
 
   // heal: 拾った時→バッグに入れる。使った時→HP回復。
   registry.register("heal", ({ game, player, itemName, params, source }) => {
-    const amount = numberParam(params, "amount", 0);
+    const healAmount = numberEffectParam(params, "amount", 0);
     if (source === "pickup") {
       game.offerBagItem({
         name: itemName,
         effectId: "heal",
-        params: { amount },
-        description: `HP +${amount}`,
+        params: { amount: healAmount },
+        description: `HP +${healAmount}`,
       });
       return;
     }
 
-    const healed = player.heal(amount);
-    game.logger.add(game.config.messages.itemUsed(itemName, healed));
+    const healedAmount = player.heal(healAmount);
+    game.logger.add(game.config.messages.itemUsed(itemName, healedAmount));
   });
 
   // equipWeapon: 拾った時のみ即装備。既存武器はバッグへ返却。
   registry.register("equipWeapon", ({ game, player, itemName, params, source }) => {
     if (source !== "pickup") return;
 
-    const atk = numberParam(params, "atk", 0);
+    const weaponAttackBonus = numberEffectParam(params, "atk", 0);
 
     // 既存の武器があればバッグへ返却を試みる（満杯の場合はロスト）
     if (player.weapon !== null) {
-      const oldWeapon = player.weapon;
+      const equippedWeapon = player.weapon;
       player.addItem({
-        name: oldWeapon.name,
+        name: equippedWeapon.name,
         effectId: "equipWeapon",
-        params: { atk: oldWeapon.atk },
-        description: `ATK +${oldWeapon.atk}`,
+        params: { atk: equippedWeapon.atk },
+        description: `ATK +${equippedWeapon.atk}`,
       });
     }
 
-    player.weapon = { name: itemName, atk };
-    game.logger.add(game.config.messages.weaponEquipped(itemName, atk));
+    player.weapon = { name: itemName, atk: weaponAttackBonus };
+    game.logger.add(game.config.messages.weaponEquipped(itemName, weaponAttackBonus));
   });
 
   return registry;

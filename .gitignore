@@ -52,4 +52,4 @@ temp/
 *.swo
 
 # ドキュメント生成物
-docs/
+docs/tasks

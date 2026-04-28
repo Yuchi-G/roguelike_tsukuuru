@@ -24,16 +24,16 @@ export abstract class Entity {
  */
 export abstract class Actor extends Entity {
   constructor(
-    x: number,
-    y: number,
-    char: string,
+    spawnX: number,
+    spawnY: number,
+    glyph: string,
     color: string,
     public name: string,
     public hp: number,
     public maxHp: number,
     public attackPower: number,
   ) {
-    super(x, y, char, color, true);
+    super(spawnX, spawnY, glyph, color, true);
   }
 
   /** HPが0になったかどうかの死亡判定。 */
@@ -42,14 +42,14 @@ export abstract class Actor extends Entity {
   }
 
   /** 戦闘で受けたダメージをHPへ反映する。 */
-  damage(amount: number): void {
-    this.hp = Math.max(0, Math.round(this.hp - Math.round(amount)));
+  damage(damageAmount: number): void {
+    this.hp = Math.max(0, Math.round(this.hp - Math.round(damageAmount)));
   }
 
   /** 回復薬などでHPを回復し、実際に増えた量を返す。 */
-  heal(amount: number): number {
-    const before = this.hp;
-    this.hp = Math.min(this.maxHp, Math.round(this.hp + Math.round(amount)));
-    return this.hp - before;
+  heal(healAmount: number): number {
+    const hpBeforeHeal = this.hp;
+    this.hp = Math.min(this.maxHp, Math.round(this.hp + Math.round(healAmount)));
+    return this.hp - hpBeforeHeal;
   }
 }

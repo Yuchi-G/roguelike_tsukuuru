@@ -5,32 +5,32 @@ import type { GameMap } from "../map/Map";
 
 /** タイル文字、敵、アイテム、ゲームオーバー表示をCanvasに描くクラス。 */
 export class Renderer {
-  private context: CanvasRenderingContext2D;
+  private canvasContext: CanvasRenderingContext2D;
 
-  constructor(private canvas: HTMLCanvasElement, private config: RenderConfig) {
-    const context = canvas.getContext("2d");
-    if (!context) {
+  constructor(private canvas: HTMLCanvasElement, private renderConfig: RenderConfig) {
+    const canvasContext = canvas.getContext("2d");
+    if (!canvasContext) {
       throw new Error("CanvasRenderingContext2D is not available.");
     }
-    this.context = context;
+    this.canvasContext = canvasContext;
     this.setBaseFont();
-    this.context.textAlign = "center";
-    this.context.textBaseline = "middle";
+    this.canvasContext.textAlign = "center";
+    this.canvasContext.textBaseline = "middle";
   }
 
   /** マップサイズに合わせてCanvasサイズを調整する。 */
   resizeToMap(map: GameMap): void {
-    this.canvas.width = map.width * this.config.tileSize;
-    this.canvas.height = map.height * this.config.tileSize;
+    this.canvas.width = map.width * this.renderConfig.tileSize;
+    this.canvas.height = map.height * this.renderConfig.tileSize;
     this.setBaseFont();
-    this.context.textAlign = "center";
-    this.context.textBaseline = "middle";
+    this.canvasContext.textAlign = "center";
+    this.canvasContext.textBaseline = "middle";
   }
 
   /** 1フレーム分の描画。マップ、エンティティ、必要ならゲームオーバーを重ねる。 */
-  render(map: GameMap, entities: Entity[], fov: Fov, isGameOver: boolean): void {
-    this.context.fillStyle = this.config.canvasBackground;
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  renderDungeonFrame(map: GameMap, entities: Entity[], fov: Fov, isGameOver: boolean): void {
+    this.canvasContext.fillStyle = this.renderConfig.canvasBackground;
+    this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.drawMap(map, fov);
     this.drawEntities(entities, fov);
@@ -40,28 +40,28 @@ export class Renderer {
     }
   }
 
-  clear(): void {
-    this.context.fillStyle = this.config.canvasBackground;
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  clearCanvas(): void {
+    this.canvasContext.fillStyle = this.renderConfig.canvasBackground;
+    this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /** 視界情報に応じて、見える場所は明るく、探索済みの場所は暗く描く。 */
   private drawMap(map: GameMap, fov: Fov): void {
-    for (let y = 0; y < map.height; y += 1) {
-      for (let x = 0; x < map.width; x += 1) {
-        if (!fov.isExplored(x, y)) {
-          this.drawCell(x, y, " ", this.config.unexploredColor, this.config.unexploredBackground);
+    for (let tileY = 0; tileY < map.height; tileY += 1) {
+      for (let tileX = 0; tileX < map.width; tileX += 1) {
+        if (!fov.isExplored(tileX, tileY)) {
+          this.drawMapCell(tileX, tileY, " ", this.renderConfig.unexploredColor, this.renderConfig.unexploredBackground);
           continue;
         }
 
-        const tile = map.getTile(x, y);
-        const visible = fov.isVisible(x, y);
-        this.drawCell(
-          x,
-          y,
+        const tile = map.getTile(tileX, tileY);
+        const isTileVisible = fov.isVisible(tileX, tileY);
+        this.drawMapCell(
+          tileX,
+          tileY,
           tile.char,
-          visible ? tile.color : this.config.exploredColor,
-          visible ? tile.background : this.config.exploredBackground,
+          isTileVisible ? tile.color : this.renderConfig.exploredColor,
+          isTileVisible ? tile.background : this.renderConfig.exploredBackground,
         );
       }
     }
@@ -71,40 +71,40 @@ export class Renderer {
   private drawEntities(entities: Entity[], fov: Fov): void {
     for (const entity of entities) {
       if (!fov.isVisible(entity.x, entity.y)) continue;
-      this.drawCell(entity.x, entity.y, entity.char, entity.color, undefined);
+      this.drawMapCell(entity.x, entity.y, entity.char, entity.color, undefined);
     }
   }
 
   /** 1マス分の背景と文字を描く共通処理。 */
-  private drawCell(x: number, y: number, char: string, color: string, background?: string): void {
-    const px = x * this.config.tileSize;
-    const py = y * this.config.tileSize;
+  private drawMapCell(tileX: number, tileY: number, glyph: string, color: string, background?: string): void {
+    const pixelX = tileX * this.renderConfig.tileSize;
+    const pixelY = tileY * this.renderConfig.tileSize;
 
     if (background) {
-      this.context.fillStyle = background;
-      this.context.fillRect(px, py, this.config.tileSize, this.config.tileSize);
+      this.canvasContext.fillStyle = background;
+      this.canvasContext.fillRect(pixelX, pixelY, this.renderConfig.tileSize, this.renderConfig.tileSize);
     }
 
-    if (char.trim().length > 0) {
-      this.context.fillStyle = color;
-      this.context.fillText(char, px + this.config.tileSize / 2, py + this.config.tileSize / 2 + 1);
+    if (glyph.trim().length > 0) {
+      this.canvasContext.fillStyle = color;
+      this.canvasContext.fillText(glyph, pixelX + this.renderConfig.tileSize / 2, pixelY + this.renderConfig.tileSize / 2 + 1);
     }
   }
 
   /** プレイヤー死亡時のオーバーレイ表示。 */
   private drawGameOver(): void {
-    this.context.fillStyle = this.config.gameOverOverlay;
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.context.fillStyle = this.config.gameOverTitleColor;
-    this.context.font = `48px ${this.config.fontFamily}`;
-    this.context.fillText(this.config.gameOverTitle, this.canvas.width / 2, this.canvas.height / 2);
-    this.context.fillStyle = this.config.gameOverTextColor;
-    this.context.font = `20px ${this.config.fontFamily}`;
-    this.context.fillText(this.config.gameOverText, this.canvas.width / 2, this.canvas.height / 2 + 44);
+    this.canvasContext.fillStyle = this.renderConfig.gameOverOverlay;
+    this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.canvasContext.fillStyle = this.renderConfig.gameOverTitleColor;
+    this.canvasContext.font = `48px ${this.renderConfig.fontFamily}`;
+    this.canvasContext.fillText(this.renderConfig.gameOverTitle, this.canvas.width / 2, this.canvas.height / 2);
+    this.canvasContext.fillStyle = this.renderConfig.gameOverTextColor;
+    this.canvasContext.font = `20px ${this.renderConfig.fontFamily}`;
+    this.canvasContext.fillText(this.renderConfig.gameOverText, this.canvas.width / 2, this.canvas.height / 2 + 44);
     this.setBaseFont();
   }
 
   private setBaseFont(): void {
-    this.context.font = `${this.config.tileSize}px ${this.config.fontFamily}`;
+    this.canvasContext.font = `${this.renderConfig.tileSize}px ${this.renderConfig.fontFamily}`;
   }
 }

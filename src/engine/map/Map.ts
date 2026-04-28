@@ -13,32 +13,32 @@ export class GameMap {
   }
 
   /** 2D座標を配列の位置へ変換する。 */
-  index(x: number, y: number): number {
-    return y * this.width + x;
+  index(tileX: number, tileY: number): number {
+    return tileY * this.width + tileX;
   }
 
   /** マップ外を参照しないための境界判定。 */
-  isInBounds(x: number, y: number): boolean {
-    return x >= 0 && x < this.width && y >= 0 && y < this.height;
+  isInBounds(tileX: number, tileY: number): boolean {
+    return tileX >= 0 && tileX < this.width && tileY >= 0 && tileY < this.height;
   }
 
   /** 指定座標のタイルを取得する。マップ外は壁として扱う。 */
-  getTile(x: number, y: number): Tile {
-    if (!this.isInBounds(x, y)) {
+  getTile(tileX: number, tileY: number): Tile {
+    if (!this.isInBounds(tileX, tileY)) {
       return Tile.wall();
     }
-    return this.tiles[this.index(x, y)];
+    return this.tiles[this.index(tileX, tileY)];
   }
 
   /** ダンジョン生成時に指定座標のタイルを置き換える。 */
-  setTile(x: number, y: number, tile: Tile): void {
-    if (this.isInBounds(x, y)) {
-      this.tiles[this.index(x, y)] = tile;
+  setTile(tileX: number, tileY: number, tile: Tile): void {
+    if (this.isInBounds(tileX, tileY)) {
+      this.tiles[this.index(tileX, tileY)] = tile;
     }
   }
 
   /** 壁ではなく、マップ内であれば移動可能な地形とみなす。 */
-  isWalkable(x: number, y: number): boolean {
-    return this.isInBounds(x, y) && !this.getTile(x, y).blocksMovement;
+  isWalkable(tileX: number, tileY: number): boolean {
+    return this.isInBounds(tileX, tileY) && !this.getTile(tileX, tileY).blocksMovement;
   }
 }

@@ -12,8 +12,8 @@ import type { Player } from "./Player";
 
 /** マップ上に置かれるアイテム。 */
 export class Item extends Entity {
-  constructor(x: number, y: number, public definition: ItemDefinition) {
-    super(x, y, definition.char, definition.color, false);
+  constructor(spawnX: number, spawnY: number, public definition: ItemDefinition) {
+    super(spawnX, spawnY, definition.char, definition.color, false);
   }
 
   get name(): string {
@@ -22,18 +22,18 @@ export class Item extends Entity {
 
   /** プレイヤーが上に乗った時の取得処理。スクリプト優先、なければレジストリ。 */
   onPickup(player: Player, game: Game): void {
-    const script = this.definition.effectScript;
-    if (script) {
-      game.scriptInterpreter.run(script, { game, self: player });
+    const pickupScript = this.definition.effectScript;
+    if (pickupScript) {
+      game.scriptInterpreter.run(pickupScript, { game, self: player });
       return;
     }
 
-    for (const effect of this.definition.effects) {
-      game.itemEffectRegistry.run(effect.effectId, {
+    for (const itemEffectDefinition of this.definition.effects) {
+      game.itemEffectRegistry.run(itemEffectDefinition.effectId, {
         game,
         player,
         itemName: this.name,
-        params: effect.params,
+        params: itemEffectDefinition.params,
         source: "pickup",
       });
     }

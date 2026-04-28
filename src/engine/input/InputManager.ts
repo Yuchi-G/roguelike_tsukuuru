@@ -5,73 +5,73 @@ export type Direction = {
 
 /** 入力イベントを受け取り、Gameへコールバックで通知するクラス。 */
 export class InputManager {
-  private onMove: ((direction: Direction) => void) | null = null;
-  private onRestart: (() => void) | null = null;
-  private onAction: (() => void) | null = null;
-  private onUseItem: (() => void) | null = null;
-  private enabled = true;
+  private moveHandler: ((direction: Direction) => void) | null = null;
+  private restartHandler: (() => void) | null = null;
+  private floorActionHandler: (() => void) | null = null;
+  private useItemHandler: (() => void) | null = null;
+  private acceptsPlayerInput = true;
 
   constructor() {
     window.addEventListener("keydown", (event) => this.handleKeyDown(event));
   }
 
   /** 移動キーが押された時に呼ぶ処理を登録する。 */
-  setMoveHandler(handler: (direction: Direction) => void): void {
-    this.onMove = handler;
+  setMoveHandler(moveHandler: (direction: Direction) => void): void {
+    this.moveHandler = moveHandler;
   }
 
   /** ゲームオーバー後の再開始キーに使う処理を登録する。 */
-  setRestartHandler(handler: () => void): void {
-    this.onRestart = handler;
+  setRestartHandler(restartHandler: () => void): void {
+    this.restartHandler = restartHandler;
   }
 
   /** Spaceキーなど、移動以外のアクションに使う処理を登録する。 */
-  setActionHandler(handler: () => void): void {
-    this.onAction = handler;
+  setActionHandler(floorActionHandler: () => void): void {
+    this.floorActionHandler = floorActionHandler;
   }
 
   /** バッグ内のアイテムを使う処理を登録する。 */
-  setUseItemHandler(handler: () => void): void {
-    this.onUseItem = handler;
+  setUseItemHandler(useItemHandler: () => void): void {
+    this.useItemHandler = useItemHandler;
   }
 
   /** ゲームオーバー中は通常操作を止めるための切り替え。 */
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+  setEnabled(acceptsPlayerInput: boolean): void {
+    this.acceptsPlayerInput = acceptsPlayerInput;
   }
 
   /** キー入力をゲーム操作へ振り分ける。 */
   private handleKeyDown(event: KeyboardEvent): void {
     if (event.key === "Enter") {
       event.preventDefault();
-      this.onRestart?.();
+      this.restartHandler?.();
       return;
     }
 
-    if (!this.enabled) return;
+    if (!this.acceptsPlayerInput) return;
 
     if (event.key === " ") {
       event.preventDefault();
-      this.onAction?.();
+      this.floorActionHandler?.();
       return;
     }
 
     if (event.key.toLowerCase() === "h") {
       event.preventDefault();
-      this.onUseItem?.();
+      this.useItemHandler?.();
       return;
     }
 
-    const direction = this.directionForKey(event.key);
-    if (!direction) return;
+    const moveDirection = this.directionForKey(event.key);
+    if (!moveDirection) return;
 
     event.preventDefault();
-    this.onMove?.(direction);
+    this.moveHandler?.(moveDirection);
   }
 
   /** 矢印キーとWASDをグリッド移動の方向に変換する。 */
-  private directionForKey(key: string): Direction | null {
-    switch (key.toLowerCase()) {
+  private directionForKey(keyName: string): Direction | null {
+    switch (keyName.toLowerCase()) {
       case "arrowup":
       case "w":
         return { dx: 0, dy: -1 };

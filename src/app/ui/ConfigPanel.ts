@@ -146,10 +146,13 @@ export class ConfigPanel {
       this.numberInput("タイルサイズ", "render.tileSize", this.config.render.tileSize, 8),
       this.textInput("フォント", "render.fontFamily", this.config.render.fontFamily),
       this.colorInput("背景", "render.canvasBackground", this.config.render.canvasBackground),
+      this.colorInput("未探索文字", "render.unexploredColor", this.config.render.unexploredColor),
       this.colorInput("未探索背景", "render.unexploredBackground", this.config.render.unexploredBackground),
       this.colorInput("探索済み文字", "render.exploredColor", this.config.render.exploredColor),
       this.colorInput("探索済み背景", "render.exploredBackground", this.config.render.exploredBackground),
-      this.colorInput("GAME OVER文字", "render.gameOverTitleColor", this.config.render.gameOverTitleColor),
+      this.textInput("GAME OVER背景", "render.gameOverOverlay", this.config.render.gameOverOverlay),
+      this.colorInput("GAME OVERタイトル色", "render.gameOverTitleColor", this.config.render.gameOverTitleColor),
+      this.colorInput("GAME OVER本文色", "render.gameOverTextColor", this.config.render.gameOverTextColor),
       this.textInput("GAME OVERタイトル", "render.gameOverTitle", this.config.render.gameOverTitle),
       this.textInput("GAME OVER説明文", "render.gameOverText", this.config.render.gameOverText),
       "</fieldset>",
@@ -454,7 +457,10 @@ export class ConfigPanel {
     this.config.render.unexploredBackground = this.stringValue(formData, "render.unexploredBackground", this.config.render.unexploredBackground);
     this.config.render.exploredColor = this.stringValue(formData, "render.exploredColor", this.config.render.exploredColor);
     this.config.render.exploredBackground = this.stringValue(formData, "render.exploredBackground", this.config.render.exploredBackground);
+    this.config.render.unexploredColor = this.stringValue(formData, "render.unexploredColor", this.config.render.unexploredColor);
+    this.config.render.gameOverOverlay = this.stringValue(formData, "render.gameOverOverlay", this.config.render.gameOverOverlay);
     this.config.render.gameOverTitleColor = this.stringValue(formData, "render.gameOverTitleColor", this.config.render.gameOverTitleColor);
+    this.config.render.gameOverTextColor = this.stringValue(formData, "render.gameOverTextColor", this.config.render.gameOverTextColor);
     this.config.render.gameOverTitle = this.stringValue(formData, "render.gameOverTitle", this.config.render.gameOverTitle);
     this.config.render.gameOverText = this.stringValue(formData, "render.gameOverText", this.config.render.gameOverText);
   }

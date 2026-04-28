@@ -166,7 +166,7 @@ export const sampleGameConfig: GameConfig = {
     attackGainPerLevel: 2,
   },
   // ConfigPanelのAI/効果選択肢に追加するカスタムID。実装はmain.tsで登録する。
-  customAiIds: ["flee"],
+  customAiIds: [],
   customEffectIds: ["fullHeal"],
   messages: {
     floorArrive: (floor) => `${floor}階に到着した。`,

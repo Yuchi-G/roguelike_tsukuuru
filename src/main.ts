@@ -72,6 +72,7 @@ function returnToSetup(): void {
   gameShell.classList.add("setup-mode");
   startScreen.classList.remove("is-hidden");
   game.resetToUnstarted();
+  configPanel.refresh();
 }
 
 function openConfigFromGame(): void {

@@ -1,12 +1,12 @@
-# Dependencies
+# 依存パッケージ
 node_modules/
 
-# Build outputs
+# ビルド出力
 dist/
 build/
 coverage/
 
-# Local environment and secrets
+# 環境変数・シークレット
 .env
 .env.*
 !.env.example
@@ -15,7 +15,7 @@ coverage/
 *.crt
 *.p12
 
-# Logs
+# ログ
 logs/
 *.log
 npm-debug.log*
@@ -23,30 +23,33 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Vite / tooling caches
+# Vite / ツールのキャッシュ
 .vite/
 .cache/
 .parcel-cache/
 .turbo/
 *.tsbuildinfo
 
-# Test and browser automation artifacts
+# テスト・ブラウザ自動化の成果物
 test-results/
 playwright-report/
 
-# OS files
+# OS生成ファイル
 .DS_Store
 Thumbs.db
 
-# Editor and IDE local settings
+# エディタ・IDEのローカル設定
 .idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.example.json
 
-# Temporary files
+# 一時ファイル
 tmp/
 temp/
 *.tmp
 *.swp
 *.swo
+
+# ドキュメント生成物
+docs/

@@ -11,20 +11,55 @@
   </head>
   <body>
     <div id="app" class="setup-mode">
+      <header class="maker-menubar" aria-label="制作メニュー">
+        <button type="button" data-menu-command="project">プロジェクト</button>
+        <button type="button" data-menu-command="map">マップ</button>
+        <button type="button" data-menu-command="event">イベント</button>
+        <button type="button" data-menu-command="database">データベース</button>
+        <button type="button" data-menu-command="testplay">テストプレイ</button>
+        <button type="button" data-menu-command="settings">設定</button>
+      </header>
       <main id="game-shell" class="game-shell setup-mode">
-        <div class="map-panel">
+        <aside class="palette-panel maker-panel" aria-label="タイル/オブジェクトパレット">
+          <div class="panel-title">タイル/オブジェクト</div>
+          <div id="tool-palette" class="tool-palette">
+            <button class="is-selected" type="button" data-tool="床" data-layer="地形" data-marker=".">床</button>
+            <button type="button" data-tool="壁" data-layer="地形" data-marker="#">壁</button>
+            <button type="button" data-tool="階段" data-layer="地形" data-marker=">">階段</button>
+            <button type="button" data-tool="敵" data-layer="イベント" data-marker="E">敵</button>
+            <button type="button" data-tool="アイテム" data-layer="イベント" data-marker="!">アイテム</button>
+            <button type="button" data-tool="罠" data-layer="イベント" data-marker="^">罠</button>
+          </div>
+        </aside>
+        <div class="map-panel maker-panel">
+          <div class="map-editor-toolbar">
+            <div>
+              <h1>MAP001</h1>
+              <span>現在の編集レイヤー: <strong id="current-layer">地形</strong></span>
+            </div>
+            <div class="map-size-label">32 x 22</div>
+          </div>
+          <div id="tile-map-editor" class="tile-map-editor" aria-label="タイルマップ編集エリア"></div>
           <canvas id="game-canvas" width="960" height="640" aria-label="roguelike game canvas"></canvas>
           <div id="start-screen" class="start-screen" aria-live="polite">
             <div>
-              <strong>Roguelike Tsukuuru</strong>
-              <span>右の設定を調整してからゲームスタート</span>
+              <strong>編集モード</strong>
+              <span>パレットから選び、グリッドへ配置</span>
             </div>
           </div>
           <div id="map-overlay" class="map-overlay" aria-live="polite"></div>
         </div>
-        <aside class="side-panel">
+        <aside class="side-panel maker-panel">
+          <section class="panel-block inspector-section">
+            <h2>プロパティ</h2>
+            <div id="selection-inspector" class="selection-inspector">
+              <div><span>対象</span><strong>床</strong></div>
+              <div><span>座標</span><strong>0, 0</strong></div>
+              <div><span>レイヤー</span><strong>地形</strong></div>
+            </div>
+          </section>
           <section class="panel-block status-section">
-            <h1>Roguelike Tsukuuru</h1>
+            <h2>テストプレイ</h2>
             <div id="status" class="status"></div>
           </section>
           <section class="panel-block log-section">
@@ -32,11 +67,17 @@
             <ol id="log" class="log"></ol>
           </section>
           <section class="panel-block config-section">
-            <h2>設定</h2>
+            <h2>データベース</h2>
             <div id="config-panel" class="config-panel"></div>
           </section>
         </aside>
       </main>
+      <footer class="maker-statusbar">
+        <span>座標 <strong id="status-coordinate">0, 0</strong></span>
+        <span>ツール <strong id="status-tool">床</strong></span>
+        <span>レイヤー <strong id="status-layer">地形</strong></span>
+        <span>保存状態 <strong id="status-save">保存済み</strong></span>
+      </footer>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

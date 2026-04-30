@@ -12,6 +12,8 @@ import type { ScriptDefinition } from "../../engine/script/Script";
 import { ScriptEditor } from "./ScriptEditor";
 
 type MessageKey = keyof GameConfig["messages"];
+type DatabaseTab = "enemies" | "items" | "skills" | "terrain" | "events";
+type PendingDialogAction = "save-project" | "save-project-as";
 
 /** ログ文言のテンプレート。{変数名} 形式のプレースホルダを実行時に置換する。 */
 const messageTemplates: Record<MessageKey, string> = {
@@ -49,6 +51,8 @@ export class ConfigPanel {
   private projectStatus = "";
   private projectInfo: ProjectInfo = { filePath: null, isDirty: false };
   private scriptEditors: ScriptEditor[] = [];
+  private activeDatabaseTab: DatabaseTab = "enemies";
+  private pendingDialogAction: PendingDialogAction | null = null;
 
   constructor(
     private root: HTMLElement,
@@ -84,21 +88,98 @@ export class ConfigPanel {
   /** 全セクションのHTMLを組み立てて root に書き込む。 */
   private render(): void {
     this.root.innerHTML = [
-      '<form class="config-form">',
-      this.renderPlayerSection(),
-      this.renderDungeonSection(),
-      this.renderProgressionSection(),
-      this.renderRenderSection(),
-      this.renderEnemySection(),
-      this.renderItemSection(),
-      this.renderFloorSection(),
-      this.renderTileSection(),
-      this.renderMessageSection(),
-      this.renderProjectSection(),
+      '<form class="config-form database-form">',
+      this.renderDatabaseTabs(),
+      '<div class="database-workspace">',
+      this.renderDatabaseList(),
+      '<div class="database-detail">',
+      this.renderDatabasePage("enemies", [this.renderEnemySection()]),
+      this.renderDatabasePage("items", [this.renderItemSection()]),
+      this.renderDatabasePage("skills", [this.renderPlayerSection(), this.renderProgressionSection(), this.renderRenderSection()]),
+      this.renderDatabasePage("terrain", [this.renderDungeonSection(), this.renderFloorSection(), this.renderTileSection()]),
+      this.renderDatabasePage("events", [this.renderMessageSection(), this.renderProjectSection()]),
+      "</div>",
+      "</div>",
       `<button class="config-apply" type="submit">${escapeHtml(this.submitLabel())}</button>`,
+      this.renderDialog(),
       "</form>",
     ].join("");
     this.mountScriptEditors();
+  }
+
+  private renderDatabaseTabs(): string {
+    const tabs: Array<[DatabaseTab, string]> = [
+      ["enemies", "敵"],
+      ["items", "アイテム"],
+      ["skills", "スキル"],
+      ["terrain", "地形"],
+      ["events", "イベント"],
+    ];
+    return [
+      '<div class="database-tabs" role="tablist" aria-label="データベース">',
+      ...tabs.map(([tabId, label]) => (
+        `<button type="button" role="tab" data-database-tab="${tabId}" class="${this.activeDatabaseTab === tabId ? "is-active" : ""}">${label}</button>`
+      )),
+      "</div>",
+    ].join("");
+  }
+
+  private renderDatabaseList(): string {
+    const rows = this.databaseListRows();
+    return [
+      '<aside class="database-list" aria-label="一覧">',
+      `<strong>${escapeHtml(this.databaseTabLabel(this.activeDatabaseTab))}</strong>`,
+      '<ol>',
+      ...rows.map((row, index) => `<li class="${index === 0 ? "is-selected" : ""}">${escapeHtml(row)}</li>`),
+      "</ol>",
+      "</aside>",
+    ].join("");
+  }
+
+  private databaseListRows(): string[] {
+    switch (this.activeDatabaseTab) {
+      case "enemies":
+        return this.config.enemies.map((enemy) => enemy.name);
+      case "items":
+        return this.config.items.map((item) => item.name);
+      case "skills":
+        return ["プレイヤー", "成長 / 視界", "Canvas描画"];
+      case "terrain":
+        return ["ダンジョン", "階層ルール", ...Object.keys(this.config.tiles)];
+      case "events":
+        return ["ログ文言", "プロジェクト"];
+    }
+  }
+
+  private databaseTabLabel(tabId: DatabaseTab): string {
+    const labels: Record<DatabaseTab, string> = {
+      enemies: "敵",
+      items: "アイテム",
+      skills: "スキル",
+      terrain: "地形",
+      events: "イベント",
+    };
+    return labels[tabId];
+  }
+
+  private renderDatabasePage(tabId: DatabaseTab, sections: string[]): string {
+    return `<section class="database-page${this.activeDatabaseTab === tabId ? " is-active" : ""}" data-database-page="${tabId}">${sections.join("")}</section>`;
+  }
+
+  private renderDialog(): string {
+    if (!this.pendingDialogAction) return "";
+
+    return [
+      '<div class="dialog-backdrop">',
+      '<div class="dialog-window" role="dialog" aria-modal="true" aria-label="保存確認">',
+      '<p>保存しますか？</p>',
+      '<div class="dialog-command-list">',
+      '<button type="button" data-dialog-answer="yes">&gt; はい</button>',
+      '<button type="button" data-dialog-answer="no">　いいえ</button>',
+      "</div>",
+      "</div>",
+      "</div>",
+    ].join("");
   }
 
   private renderPlayerSection(): string {
@@ -184,6 +265,7 @@ export class ConfigPanel {
     return [
       '<div class="config-group">',
       `<strong>${escapeHtml(enemy.name)}</strong>`,
+      `<button class="config-secondary compact" type="button" data-action="duplicate-enemy" data-id="${escapeHtml(enemy.id)}">複製</button>`,
       this.checkboxInput("削除", `${enemyFieldPrefix}.delete`, false),
       this.textInput("名前", `${enemyFieldPrefix}.name`, enemy.name),
       this.textInput("見た目", `${enemyFieldPrefix}.char`, enemy.char, 1),
@@ -231,6 +313,7 @@ export class ConfigPanel {
     return [
       '<div class="config-group">',
       `<strong>${escapeHtml(item.name)}</strong>`,
+      `<button class="config-secondary compact" type="button" data-action="duplicate-item" data-id="${escapeHtml(item.id)}">複製</button>`,
       this.checkboxInput("削除", `${itemFieldPrefix}.delete`, false),
       this.textInput("名前", `${itemFieldPrefix}.name`, item.name),
       this.textInput("見た目", `${itemFieldPrefix}.char`, item.char, 1),
@@ -277,6 +360,9 @@ export class ConfigPanel {
       ...Object.entries(this.config.tiles).map(([tileType, tileDefinition]) => [
         '<div class="config-group">',
         `<strong>${escapeHtml(tileType)}</strong>`,
+        !coreTileTypes.has(tileType)
+          ? `<button class="config-secondary compact" type="button" data-action="duplicate-tile" data-id="${escapeHtml(tileType)}">複製</button>`
+          : "",
         this.textInput("見た目", `tile.${tileType}.char`, tileDefinition.char, 1),
         this.colorInput("文字色", `tile.${tileType}.color`, tileDefinition.color),
         this.colorInput("背景色", `tile.${tileType}.background`, tileDefinition.background),
@@ -338,6 +424,32 @@ export class ConfigPanel {
     const clickedElement = event.target;
     if (!(clickedElement instanceof HTMLElement)) return;
 
+    const tabButton = clickedElement.closest<HTMLButtonElement>("button[data-database-tab]");
+    if (tabButton) {
+      this.applyCurrentForm(tabButton);
+      this.activeDatabaseTab = (tabButton.dataset.databaseTab as DatabaseTab | undefined) ?? this.activeDatabaseTab;
+      this.render();
+      return;
+    }
+
+    const dialogButton = clickedElement.closest<HTMLButtonElement>("button[data-dialog-answer]");
+    if (dialogButton) {
+      const action = this.pendingDialogAction;
+      this.pendingDialogAction = null;
+      if (dialogButton.dataset.dialogAnswer !== "yes" || !action) {
+        this.render();
+        return;
+      }
+
+      this.applyCurrentForm(dialogButton);
+      if (action === "save-project") {
+        void this.saveProject();
+      } else {
+        void this.saveProjectAs();
+      }
+      return;
+    }
+
     if (clickedElement.dataset.action === "new-project") {
       void this.newProject();
       return;
@@ -353,11 +465,30 @@ export class ConfigPanel {
       return;
     }
 
+    if (clickedElement.dataset.action === "duplicate-enemy") {
+      this.applyCurrentForm(clickedElement);
+      void this.duplicateEnemy(clickedElement.dataset.id ?? "");
+      return;
+    }
+
+    if (clickedElement.dataset.action === "duplicate-item") {
+      this.applyCurrentForm(clickedElement);
+      void this.duplicateItem(clickedElement.dataset.id ?? "");
+      return;
+    }
+
+    if (clickedElement.dataset.action === "duplicate-tile") {
+      this.applyCurrentForm(clickedElement);
+      void this.duplicateTile(clickedElement.dataset.id ?? "");
+      return;
+    }
+
     if (clickedElement.dataset.action === "save-project") {
       const configForm = clickedElement.closest("form");
       if (configForm instanceof HTMLFormElement) {
         this.applyFormConfig(new FormData(configForm));
-        void this.saveProject();
+        this.pendingDialogAction = "save-project";
+        this.render();
       }
       return;
     }
@@ -366,7 +497,8 @@ export class ConfigPanel {
       const configForm = clickedElement.closest("form");
       if (configForm instanceof HTMLFormElement) {
         this.applyFormConfig(new FormData(configForm));
-        void this.saveProjectAs();
+        this.pendingDialogAction = "save-project-as";
+        this.render();
       }
     }
   }
@@ -377,6 +509,13 @@ export class ConfigPanel {
     if (changedField.name.startsWith("project.")) return;
 
     void this.markDirty();
+  }
+
+  private applyCurrentForm(sourceElement: HTMLElement): void {
+    const configForm = sourceElement.closest("form");
+    if (configForm instanceof HTMLFormElement) {
+      this.applyFormConfig(new FormData(configForm));
+    }
   }
 
   /** フォーム送信時にフォーム値またはJSON previewから設定を反映する。 */
@@ -612,6 +751,57 @@ export class ConfigPanel {
     }
   }
 
+  private async duplicateEnemy(enemyId: string): Promise<void> {
+    const sourceEnemy = this.config.enemies.find((enemy) => enemy.id === enemyId);
+    if (!sourceEnemy) return;
+
+    const duplicatedEnemy = structuredClone(sourceEnemy);
+    duplicatedEnemy.id = this.uniqueId(`${sourceEnemy.id}_copy`, (candidateId) => this.config.enemies.some((enemy) => enemy.id === candidateId));
+    duplicatedEnemy.name = `${sourceEnemy.name} コピー`;
+    this.config.enemies.push(duplicatedEnemy);
+    this.addEnemyToFloorRules(duplicatedEnemy.id, 1);
+    await this.markDirty("敵を複製しました。");
+    this.render();
+  }
+
+  private async duplicateItem(itemId: string): Promise<void> {
+    const sourceItem = this.config.items.find((item) => item.id === itemId);
+    if (!sourceItem) return;
+
+    const duplicatedItem = structuredClone(sourceItem);
+    duplicatedItem.id = this.uniqueId(`${sourceItem.id}_copy`, (candidateId) => this.config.items.some((item) => item.id === candidateId));
+    duplicatedItem.name = `${sourceItem.name} コピー`;
+    this.config.items.push(duplicatedItem);
+    this.addItemToFloorRules(duplicatedItem.id, 0.1);
+    await this.markDirty("アイテムを複製しました。");
+    this.render();
+  }
+
+  private async duplicateTile(tileType: string): Promise<void> {
+    const sourceTile = this.config.tiles[tileType];
+    if (!sourceTile) return;
+
+    const duplicatedTileType = this.uniqueId(`${tileType}_copy`, (candidateId) => Boolean(this.config.tiles[candidateId]));
+    this.config.tiles[duplicatedTileType] = {
+      ...structuredClone(sourceTile),
+      type: duplicatedTileType,
+      scatterRate: sourceTile.scatterRate ?? 0.05,
+    };
+    await this.markDirty("地形を複製しました。");
+    this.render();
+  }
+
+  private uniqueId(baseId: string, exists: (candidateId: string) => boolean): string {
+    const normalizedBaseId = baseId.replace(/[^a-zA-Z0-9_-]/g, "_") || "copy";
+    if (!exists(normalizedBaseId)) return normalizedBaseId;
+
+    let suffix = 2;
+    while (exists(`${normalizedBaseId}_${suffix}`)) {
+      suffix += 1;
+    }
+    return `${normalizedBaseId}_${suffix}`;
+  }
+
   private applyMessages(formData: FormData): void {
     for (const messageKey of Object.keys(messageTemplates) as MessageKey[]) {
       messageTemplates[messageKey] = this.stringValue(formData, `message.${messageKey}`, messageTemplates[messageKey]);
@@ -820,10 +1010,12 @@ export class ConfigPanel {
   private updateProjectStatus(message?: string): void {
     if (message) {
       this.projectStatus = message;
+      this.updateSaveStatusElement();
       return;
     }
 
     this.projectStatus = this.projectInfo.isDirty ? "未保存の変更があります。" : "保存済みです。";
+    this.updateSaveStatusElement();
   }
 
   private async markDirty(message?: string): Promise<void> {
@@ -857,6 +1049,14 @@ export class ConfigPanel {
     const projectStatusElement = this.root.querySelector(".project-status");
     if (projectStatusElement) {
       projectStatusElement.textContent = this.projectStatus;
+    }
+    this.updateSaveStatusElement();
+  }
+
+  private updateSaveStatusElement(): void {
+    const saveStatusElement = document.querySelector<HTMLElement>("#status-save");
+    if (saveStatusElement) {
+      saveStatusElement.textContent = this.projectInfo.isDirty ? "未保存" : "保存済み";
     }
   }
 

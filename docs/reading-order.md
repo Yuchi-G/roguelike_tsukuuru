@@ -1,0 +1,31 @@
+# 初心者向けの読む順番
+
+1. `README.md`
+2. `index.html`
+3. `src/main.ts`
+4. `src/game/sampleGameConfig.ts`
+5. `src/game/MainScene.ts`
+6. `src/engine/core/Game.ts`
+7. `src/engine/core/Entity.ts`
+8. `src/game/Player.ts`
+9. `src/game/Enemy.ts`
+10. `src/game/Item.ts`
+11. `src/engine/core/TurnManager.ts`
+12. `src/engine/map/Map.ts`
+13. `src/engine/map/Tile.ts`
+14. `src/engine/map/Collision.ts`
+15. `src/engine/input/InputManager.ts`
+16. `src/engine/rendering/Renderer.ts`
+17. `src/engine/map/DungeonGenerator.ts`
+18. `src/engine/map/Fov.ts`
+19. `src/engine/registry/ItemEffectRegistry.ts`
+20. `src/engine/registry/AiRegistry.ts`
+21. `src/app/ui/ConfigPanel.ts`
+22. `src/app/storage/ProjectStorage.ts`
+23. `src/app/storage/DesktopProjectStorage.ts`
+24. `electron/preload.cjs`
+25. `electron/main.cjs`
+26. `src/engine/script/Script.ts`
+27. `src/engine/script/ScriptInterpreter.ts`
+28. `src/app/ui/ScriptEditor.ts`
+29. `tests/` 以下の関連テスト

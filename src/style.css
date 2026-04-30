@@ -694,3 +694,547 @@ h2 {
     width: 100%;
   }
 }
+
+/* ========================== RPGツクール風 制作画面 ========================== */
+
+:root {
+  color: #f8fbff;
+  background: #1b2740;
+}
+
+body {
+  background:
+    linear-gradient(90deg, rgba(143, 183, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(143, 183, 255, 0.04) 1px, transparent 1px),
+    #1b2740;
+  background-size: 24px 24px;
+  color: #f8fbff;
+}
+
+#app,
+#app.setup-mode {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  place-items: stretch;
+  padding: 0;
+}
+
+.maker-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 3px 8px;
+  border-bottom: 2px solid #8fb7ff;
+  background: rgba(4, 9, 22, 0.92);
+}
+
+.maker-menu button,
+.tool-palette button,
+.config-apply,
+.config-secondary,
+.database-tabs button,
+.dialog-commands button,
+.bag-actions button,
+.bag-contents button,
+.bag-choice button,
+.status-command {
+  border: 1px solid #8fb7ff;
+  border-radius: 2px;
+  background: rgba(9, 18, 39, 0.88);
+  color: #f8fbff;
+  font: inherit;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.22), 2px 2px 0 rgba(0, 0, 0, 0.48);
+  cursor: pointer;
+}
+
+.maker-menu button {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.maker-menu button:hover,
+.tool-palette button:hover,
+.database-tabs button:hover,
+.dialog-commands button:hover,
+.config-secondary:hover,
+.config-apply:hover {
+  border-color: #ffd866;
+  background: #233c72;
+  color: #ffd866;
+}
+
+.game-shell,
+.game-shell.setup-mode {
+  display: grid;
+  grid-template-columns: 180px minmax(420px, 1fr) minmax(320px, 420px);
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  padding: 8px;
+}
+
+.maker-window {
+  border: 2px solid #8fb7ff;
+  border-radius: 3px;
+  background: rgba(3, 8, 22, 0.84);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    3px 3px 0 rgba(0, 0, 0, 0.52);
+}
+
+.palette-panel,
+.side-panel {
+  min-height: 0;
+  padding: 10px;
+}
+
+.palette-panel h2,
+.side-panel h2,
+.map-editor-header h1 {
+  margin: 0;
+  color: #ffd866;
+  font-size: 14px;
+}
+
+.tool-palette {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.tool-palette button {
+  position: relative;
+  min-height: 34px;
+  padding: 7px 10px 7px 22px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.tool-palette button.is-selected {
+  border-color: #ffd866;
+  background: #3f7cff;
+  color: #ffffff;
+}
+
+.tool-palette button.is-selected::before {
+  content: ">";
+  position: absolute;
+  left: 9px;
+  color: #ffd866;
+}
+
+.game-shell.setup-mode .map-panel,
+.game-shell.setup-mode .side-panel,
+.game-shell.setup-mode .config-section {
+  display: block;
+}
+
+.game-shell.setup-mode .status-section,
+.game-shell.setup-mode .log-section {
+  display: none;
+}
+
+.map-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  padding: 10px;
+}
+
+.map-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.layer-badge {
+  border: 1px solid #8fb7ff;
+  background: rgba(9, 18, 39, 0.9);
+  padding: 4px 8px;
+  color: #f8fbff;
+  font-size: 12px;
+}
+
+.layer-badge strong {
+  color: #ffd866;
+}
+
+.editor-map-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--map-columns, 20), minmax(16px, 1fr));
+  align-content: start;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: auto;
+  border: 2px solid #8fb7ff;
+  background: #111c31;
+}
+
+.editor-map-cell {
+  aspect-ratio: 1;
+  min-width: 16px;
+  border: 0;
+  border-right: 1px solid rgba(143, 183, 255, 0.28);
+  border-bottom: 1px solid rgba(143, 183, 255, 0.28);
+  border-radius: 0;
+  background: #243555;
+  color: #f8fbff;
+  font: inherit;
+  font-size: clamp(10px, 1.4vw, 16px);
+  line-height: 1;
+  image-rendering: pixelated;
+  cursor: crosshair;
+}
+
+.editor-map-cell:hover {
+  outline: 2px solid #ffd866;
+  outline-offset: -2px;
+  background: #2f4773;
+}
+
+.editor-map-cell.is-wall {
+  background: #111827;
+}
+
+.editor-map-cell.has-object {
+  color: #ffd866;
+}
+
+.game-shell.setup-mode canvas {
+  display: none;
+}
+
+.game-shell:not(.setup-mode) .editor-map-grid,
+.game-shell:not(.setup-mode) .map-editor-header,
+.game-shell:not(.setup-mode) .palette-panel,
+.game-shell:not(.setup-mode) .config-section {
+  display: none;
+}
+
+.game-shell:not(.setup-mode) {
+  grid-template-columns: minmax(320px, 1fr) 320px;
+}
+
+.game-shell:not(.setup-mode) .map-panel {
+  display: block;
+}
+
+.game-shell:not(.setup-mode) canvas {
+  display: block;
+  border: 2px solid #8fb7ff;
+  background: #050914;
+}
+
+.start-screen {
+  display: none;
+}
+
+.game-shell.setup-mode .start-screen {
+  display: grid;
+  inset: auto 14px 14px auto;
+  width: min(280px, calc(100% - 28px));
+  min-height: 86px;
+  padding: 12px;
+  border: 2px solid #8fb7ff;
+  background: rgba(3, 8, 22, 0.88);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.start-screen.is-hidden {
+  display: none;
+}
+
+.start-screen strong {
+  color: #ffd866;
+  font-size: 18px;
+}
+
+.start-screen span {
+  color: #f8fbff;
+  font-size: 12px;
+}
+
+.side-panel {
+  border: 2px solid #8fb7ff;
+  background: rgba(3, 8, 22, 0.84);
+}
+
+.config-panel {
+  max-height: calc(100vh - 126px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.database-form {
+  gap: 8px;
+}
+
+.database-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.database-tabs button {
+  min-width: 0;
+  padding: 5px 4px;
+  font-size: 12px;
+}
+
+.database-tabs button.is-selected {
+  border-color: #ffd866;
+  background: #3f7cff;
+  color: #ffffff;
+}
+
+.database-layout {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+
+.database-list {
+  border: 1px solid #8fb7ff;
+  background: rgba(5, 10, 24, 0.88);
+  min-height: 240px;
+}
+
+.database-list-title {
+  padding: 5px 7px;
+  border-bottom: 1px solid #8fb7ff;
+  color: #ffd866;
+  font-size: 12px;
+}
+
+.database-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: grid;
+  gap: 3px;
+}
+
+.database-list li {
+  overflow: hidden;
+  padding: 4px 5px;
+  color: #f8fbff;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.database-list li.is-selected {
+  background: #3f7cff;
+  color: #ffffff;
+}
+
+.database-editor {
+  min-width: 0;
+}
+
+.database-page {
+  display: none;
+}
+
+.database-page.is-active {
+  display: grid;
+  gap: 8px;
+}
+
+.config-form fieldset {
+  border: 1px solid #8fb7ff;
+  border-radius: 2px;
+  background: rgba(5, 10, 24, 0.7);
+  padding: 8px;
+}
+
+.config-form legend {
+  color: #ffd866;
+}
+
+.config-form label {
+  grid-template-columns: minmax(74px, 0.85fr) minmax(80px, 1fr);
+  gap: 6px;
+  color: #f8fbff;
+}
+
+.config-form input,
+.config-form select,
+.config-form textarea,
+.se-editor input,
+.se-editor select {
+  border: 1px solid #8fb7ff;
+  border-radius: 0;
+  background: #071022;
+  color: #f8fbff;
+}
+
+.config-group {
+  border-top: 1px solid rgba(143, 183, 255, 0.42);
+}
+
+.config-group strong {
+  color: #ffd866;
+}
+
+.config-secondary.compact {
+  justify-self: start;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.project-info,
+.project-status,
+.project-help,
+.bag-contents,
+.bag-choice {
+  border: 1px solid #8fb7ff;
+  background: rgba(5, 10, 24, 0.86);
+  color: #f8fbff;
+}
+
+.project-info {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 6px;
+  padding: 5px 7px;
+  font-size: 11px;
+}
+
+.project-info strong {
+  overflow: hidden;
+  color: #ffd866;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.config-apply,
+.config-secondary {
+  background: rgba(9, 18, 39, 0.92);
+  color: #f8fbff;
+}
+
+.config-apply {
+  border-color: #ffd866;
+  color: #ffd866;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.dialog-window {
+  width: min(360px, calc(100vw - 32px));
+  border: 2px solid #8fb7ff;
+  border-radius: 3px;
+  background: rgba(3, 8, 22, 0.94);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    4px 4px 0 rgba(0, 0, 0, 0.62);
+  padding: 16px;
+}
+
+.dialog-window p {
+  margin: 0 0 12px;
+  color: #f8fbff;
+}
+
+.dialog-commands {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.dialog-commands button {
+  min-width: 112px;
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+  text-align: left;
+}
+
+.dialog-commands button:hover {
+  border-color: #ffd866;
+  background: #3f7cff;
+}
+
+.maker-statusbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  min-height: 28px;
+  border-top: 2px solid #8fb7ff;
+  background: rgba(4, 9, 22, 0.94);
+}
+
+.maker-statusbar span {
+  overflow: hidden;
+  padding: 6px 10px;
+  border-right: 1px solid rgba(143, 183, 255, 0.5);
+  color: #f8fbff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maker-statusbar strong {
+  color: #ffd866;
+}
+
+.map-overlay .bag-choice {
+  border: 2px solid #8fb7ff;
+  background: rgba(3, 8, 22, 0.94);
+}
+
+.log {
+  color: #f8fbff;
+}
+
+.log li {
+  border-left-color: #8fb7ff;
+}
+
+@media (max-width: 980px) {
+  .game-shell,
+  .game-shell.setup-mode,
+  .game-shell:not(.setup-mode) {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-panel {
+    order: 1;
+  }
+
+  .map-panel {
+    order: 2;
+  }
+
+  .side-panel {
+    order: 3;
+  }
+
+  .tool-palette {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .maker-statusbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -6,7 +6,7 @@
 // 標準効果（heal / equipWeapon）はこのファイルで登録する。
 // ---------------------------------------------------------------------------
 
-import type { EffectParams } from "../core/GameConfig";
+import type { EffectParams, EquipmentSlot, EquipmentStats } from "../core/GameConfig";
 import type { Game } from "../core/Game";
 import type { Player } from "../../game/Player";
 
@@ -48,6 +48,31 @@ export function numberEffectParam(effectParams: EffectParams, paramName: string,
   return typeof paramValue === "number" && Number.isFinite(paramValue) ? paramValue : fallback;
 }
 
+function equipmentStatsFromParams(effectParams: EffectParams): EquipmentStats {
+  return {
+    atk: numberEffectParam(effectParams, "atk", 0),
+    def: numberEffectParam(effectParams, "def", 0),
+    spd: numberEffectParam(effectParams, "spd", 0),
+    maxHp: numberEffectParam(effectParams, "maxHp", 0),
+    maxMp: numberEffectParam(effectParams, "maxMp", 0),
+  };
+}
+
+function equipmentSlotFromParams(effectParams: EffectParams): EquipmentSlot {
+  const slot = effectParams.slot;
+  return slot === "armor" || slot === "accessory" ? slot : "weapon";
+}
+
+function equipmentDescription(stats: EquipmentStats): string {
+  return [
+    stats.atk !== 0 ? `ATK +${stats.atk}` : "",
+    stats.def !== 0 ? `DEF +${stats.def}` : "",
+    stats.spd !== 0 ? `SPD +${stats.spd}` : "",
+    stats.maxHp !== 0 ? `HP +${stats.maxHp}` : "",
+    stats.maxMp !== 0 ? `MP +${stats.maxMp}` : "",
+  ].filter(Boolean).join(" ") || "装備";
+}
+
 /** 標準効果（heal / equipWeapon）を登録済みのレジストリを生成する。 */
 export function createDefaultItemEffectRegistry(): ItemEffectRegistry {
   const registry = new ItemEffectRegistry();
@@ -69,25 +94,24 @@ export function createDefaultItemEffectRegistry(): ItemEffectRegistry {
     game.logger.add(game.config.messages.itemUsed(itemName, healedAmount));
   });
 
-  // equipWeapon: 拾った時のみ即装備。既存武器はバッグへ返却。
+  // equipWeapon: 拾った時のみ指定スロットへ即装備。既存装備はバッグへ返却。
   registry.register("equipWeapon", ({ game, player, itemName, params, source }) => {
     if (source !== "pickup") return;
 
-    const weaponAttackBonus = numberEffectParam(params, "atk", 0);
+    const equipmentSlot = equipmentSlotFromParams(params);
+    const equipmentStats = equipmentStatsFromParams(params);
 
-    // 既存の武器があればバッグへ返却を試みる（満杯の場合はロスト）
-    if (player.weapon !== null) {
-      const equippedWeapon = player.weapon;
+    const replacedEquipment = player.equip({ name: itemName, slot: equipmentSlot, stats: equipmentStats });
+    if (replacedEquipment !== null) {
       player.addItem({
-        name: equippedWeapon.name,
+        name: replacedEquipment.name,
         effectId: "equipWeapon",
-        params: { atk: equippedWeapon.atk },
-        description: `ATK +${equippedWeapon.atk}`,
+        params: { slot: replacedEquipment.slot, ...replacedEquipment.stats },
+        description: equipmentDescription(replacedEquipment.stats),
       });
     }
 
-    player.weapon = { name: itemName, atk: weaponAttackBonus };
-    game.logger.add(game.config.messages.weaponEquipped(itemName, weaponAttackBonus));
+    game.logger.add(game.config.messages.weaponEquipped(itemName, equipmentStats.atk));
   });
 
   return registry;

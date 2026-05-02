@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 
 import { escapeHtml } from "../../engine/utils/escapeHtml";
-import type { EnemyDefinition, FloorRangeRule, GameConfig, ItemDefinition } from "../../engine/core/GameConfig";
+import type { EnemyDefinition, EquipmentSlot, FloorRangeRule, GameConfig, ItemDefinition, ItemKind } from "../../engine/core/GameConfig";
 import type { ProjectInfo, ProjectStorage } from "../storage/ProjectStorage";
 import type { ScriptDefinition } from "../../engine/script/Script";
 import { ScriptEditor } from "./ScriptEditor";
@@ -39,6 +39,8 @@ const messageTemplates: Record<MessageKey, string> = {
 
 const defaultAiOptions = ["chase", "stationary", "random"];
 const defaultEffectOptions = ["heal", "equipWeapon"];
+const itemKindOptions: Array<[ItemKind, string]> = [["consumable", "消耗品"], ["equipment", "装備"], ["key", "鍵"]];
+const equipmentSlotOptions: Array<[EquipmentSlot, string]> = [["weapon", "武器"], ["armor", "防具"], ["accessory", "アクセサリ"]];
 /** JSONスキーマのバージョン。読込時にマイグレーションの要否を判定する。 */
 const projectSchemaVersion = 2;
 
@@ -299,8 +301,16 @@ export class ConfigPanel {
       this.textInput("名前", "newItem.name", ""),
       this.textInput("見た目", "newItem.char", "?", 1),
       this.colorInput("色", "newItem.color", "#ffffff"),
+      this.optionSelectInput("種別", "newItem.kind", "consumable", itemKindOptions),
+      this.optionSelectInput("装備スロット", "newItem.equipmentSlot", "weapon", equipmentSlotOptions),
       this.selectInput("効果", "newItem.effectId", "heal", this.effectOptions),
       this.numberInput("効果値", "newItem.amount", 5, 0),
+      this.numberInput("ATK補正", "newItem.atk", 0, 0),
+      this.numberInput("DEF補正", "newItem.def", 0, 0),
+      this.numberInput("SPD補正", "newItem.spd", 0, 0),
+      this.numberInput("最大HP補正", "newItem.maxHp", 0, 0),
+      this.numberInput("最大MP補正", "newItem.maxMp", 0, 0),
+      this.numberInput("ショップ価格", "newItem.shopPrice", 0, 0),
       this.numberInput("初期出現率%", "newItem.chance", 35, 0, 100),
       "</div>",
       "</fieldset>",
@@ -319,8 +329,16 @@ export class ConfigPanel {
       this.textInput("名前", `${itemFieldPrefix}.name`, item.name),
       this.textInput("見た目", `${itemFieldPrefix}.char`, item.char, 1),
       this.colorInput("色", `${itemFieldPrefix}.color`, item.color),
+      this.optionSelectInput("種別", `${itemFieldPrefix}.kind`, item.kind ?? "consumable", itemKindOptions),
+      this.optionSelectInput("装備スロット", `${itemFieldPrefix}.equipmentSlot`, item.equipmentSlot ?? "weapon", equipmentSlotOptions),
       this.selectInput("効果", `${itemFieldPrefix}.effectId`, primaryEffectDefinition.effectId, this.effectOptions),
       this.numberInput("効果値", `${itemFieldPrefix}.amount`, primaryEffectValue, 0),
+      this.numberInput("ATK補正", `${itemFieldPrefix}.atk`, item.equipmentStats?.atk ?? 0, 0),
+      this.numberInput("DEF補正", `${itemFieldPrefix}.def`, item.equipmentStats?.def ?? 0, 0),
+      this.numberInput("SPD補正", `${itemFieldPrefix}.spd`, item.equipmentStats?.spd ?? 0, 0),
+      this.numberInput("最大HP補正", `${itemFieldPrefix}.maxHp`, item.equipmentStats?.maxHp ?? 0, 0),
+      this.numberInput("最大MP補正", `${itemFieldPrefix}.maxMp`, item.equipmentStats?.maxMp ?? 0, 0),
+      this.numberInput("ショップ価格", `${itemFieldPrefix}.shopPrice`, item.shopPrice ?? 0, 0),
       "</div>",
     ].join("");
   }
@@ -657,7 +675,13 @@ export class ConfigPanel {
         item.name = this.stringValue(formData, `${itemFieldPrefix}.name`, item.name);
         item.char = this.charValue(formData, `${itemFieldPrefix}.char`, item.char);
         item.color = this.stringValue(formData, `${itemFieldPrefix}.color`, item.color);
-        item.effects = [this.createEffect(effectId, this.numberValue(formData, `${itemFieldPrefix}.amount`, 0))];
+        item.kind = this.itemKindValue(formData, `${itemFieldPrefix}.kind`, item.kind ?? "consumable");
+        item.equipmentSlot = item.kind === "equipment"
+          ? this.equipmentSlotValue(formData, `${itemFieldPrefix}.equipmentSlot`, item.equipmentSlot ?? "weapon")
+          : undefined;
+        item.equipmentStats = this.equipmentStatsValue(formData, itemFieldPrefix, item.equipmentStats);
+        item.shopPrice = this.numberValue(formData, `${itemFieldPrefix}.shopPrice`, item.shopPrice ?? 0);
+        item.effects = [this.createEffect(effectId, this.numberValue(formData, `${itemFieldPrefix}.amount`, 0), item)];
         return item;
       });
 
@@ -669,8 +693,15 @@ export class ConfigPanel {
         name: this.stringValue(formData, "newItem.name", newItemId),
         char: this.charValue(formData, "newItem.char", "?"),
         color: this.stringValue(formData, "newItem.color", "#ffffff"),
-        effects: [this.createEffect(effectId, this.numberValue(formData, "newItem.amount", 5))],
+        kind: this.itemKindValue(formData, "newItem.kind", "consumable"),
+        equipmentSlot: this.equipmentSlotValue(formData, "newItem.equipmentSlot", "weapon"),
+        equipmentStats: this.equipmentStatsValue(formData, "newItem"),
+        shopPrice: this.numberValue(formData, "newItem.shopPrice", 0),
+        effects: [],
       });
+      const addedItem = this.config.items[this.config.items.length - 1];
+      if (addedItem.kind !== "equipment") addedItem.equipmentSlot = undefined;
+      addedItem.effects = [this.createEffect(effectId, this.numberValue(formData, "newItem.amount", 5), addedItem)];
       this.addItemToFloorRules(newItemId, this.numberValue(formData, "newItem.chance", 35) / 100);
     }
   }
@@ -844,9 +875,9 @@ export class ConfigPanel {
     this.config.messages.useStairsPrompt = () => messageTemplates.useStairsPrompt;
   }
 
-  private createEffect(effectId: string, effectAmount: number): ItemDefinition["effects"][number] {
+  private createEffect(effectId: string, effectAmount: number, item?: ItemDefinition): ItemDefinition["effects"][number] {
     return effectId === "equipWeapon"
-      ? { effectId, params: { atk: effectAmount } }
+      ? { effectId, params: { slot: item?.equipmentSlot ?? "weapon", ...(item?.equipmentStats ?? this.defaultEquipmentStats()), atk: item?.equipmentStats?.atk ?? effectAmount } }
       : { effectId, params: { amount: effectAmount } };
   }
 
@@ -881,6 +912,13 @@ export class ConfigPanel {
     return `<label><span>${escapeHtml(label)}</span><select name="${escapeHtml(fieldName)}">${optionHtml}</select></label>`;
   }
 
+  private optionSelectInput(label: string, fieldName: string, selectedValue: string, options: Array<[string, string]>): string {
+    const optionHtml = options
+      .map(([optionValue, optionLabel]) => `<option value="${escapeHtml(optionValue)}"${optionValue === selectedValue ? " selected" : ""}>${escapeHtml(optionLabel)}</option>`)
+      .join("");
+    return `<label><span>${escapeHtml(label)}</span><select name="${escapeHtml(fieldName)}">${optionHtml}</select></label>`;
+  }
+
   private numberValue(formData: FormData, fieldName: string, fallback: number): number {
     const rawFieldValue = formData.get(fieldName);
     if (rawFieldValue === null) return fallback;
@@ -900,6 +938,30 @@ export class ConfigPanel {
   private idValue(formData: FormData, fieldName: string): string {
     const candidateId = this.stringValue(formData, fieldName, "").trim();
     return /^[a-zA-Z0-9_-]+$/.test(candidateId) ? candidateId : "";
+  }
+
+  private itemKindValue(formData: FormData, fieldName: string, fallback: ItemKind): ItemKind {
+    const value = this.stringValue(formData, fieldName, fallback);
+    return value === "equipment" || value === "key" ? value : "consumable";
+  }
+
+  private equipmentSlotValue(formData: FormData, fieldName: string, fallback: EquipmentSlot): EquipmentSlot {
+    const value = this.stringValue(formData, fieldName, fallback);
+    return value === "armor" || value === "accessory" ? value : "weapon";
+  }
+
+  private equipmentStatsValue(formData: FormData, fieldPrefix: string, fallback = this.defaultEquipmentStats()): ItemDefinition["equipmentStats"] {
+    return {
+      atk: this.numberValue(formData, `${fieldPrefix}.atk`, fallback.atk),
+      def: this.numberValue(formData, `${fieldPrefix}.def`, fallback.def),
+      spd: this.numberValue(formData, `${fieldPrefix}.spd`, fallback.spd),
+      maxHp: this.numberValue(formData, `${fieldPrefix}.maxHp`, fallback.maxHp),
+      maxMp: this.numberValue(formData, `${fieldPrefix}.maxMp`, fallback.maxMp),
+    };
+  }
+
+  private defaultEquipmentStats(): NonNullable<ItemDefinition["equipmentStats"]> {
+    return { atk: 0, def: 0, spd: 0, maxHp: 0, maxMp: 0 };
   }
 
   private interpolate(template: string, values: Record<string, string | number>): string {
@@ -997,6 +1059,7 @@ export class ConfigPanel {
         this.migrateFloorRuleCoverage();
       }
       this.normalizeEnemyStats();
+      this.normalizeItems();
       this.applyMessageTemplates();
       return true;
     } catch {
@@ -1095,6 +1158,23 @@ export class ConfigPanel {
       enemyDefinition.maxMp = this.normalizedNumber(enemyDefinition.maxMp, 0, 0);
       enemyDefinition.defense = this.normalizedNumber(enemyDefinition.defense, 0, 0);
       enemyDefinition.speed = this.normalizedNumber(enemyDefinition.speed, 0, 0);
+    }
+  }
+
+  private normalizeItems(): void {
+    for (const itemDefinition of this.config.items) {
+      itemDefinition.kind = itemDefinition.kind ?? (itemDefinition.effects[0]?.effectId === "equipWeapon" ? "equipment" : "consumable");
+      itemDefinition.equipmentSlot = itemDefinition.kind === "equipment" ? itemDefinition.equipmentSlot ?? "weapon" : undefined;
+      itemDefinition.equipmentStats = {
+        ...this.defaultEquipmentStats(),
+        ...(itemDefinition.equipmentStats ?? {}),
+      };
+      itemDefinition.shopPrice = this.normalizedNumber(itemDefinition.shopPrice, 0, 0);
+      const primaryEffect = itemDefinition.effects[0];
+      if (primaryEffect?.effectId === "equipWeapon") {
+        itemDefinition.equipmentStats.atk = itemDefinition.equipmentStats.atk || this.effectValue("equipWeapon", primaryEffect.params);
+        primaryEffect.params = { slot: itemDefinition.equipmentSlot ?? "weapon", ...itemDefinition.equipmentStats };
+      }
     }
   }
 

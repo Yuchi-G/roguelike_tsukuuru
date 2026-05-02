@@ -168,7 +168,8 @@ export class Game {
   /** 攻撃力から防御力を引いたダメージを与え、倒した場合は経験値を加算して敵リストから除く。 */
   attack(attacker: Actor, defender: Actor): void {
     const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
-    const damage = Math.max(0, attackPower - defender.defense);
+    const defense = defender.id === this.player.id ? this.player.getDefense() : defender.defense;
+    const damage = Math.max(0, attackPower - defense);
     defender.damage(damage);
     this.logger.add(this.config.messages.attack(attacker, defender, damage));
     this.config.hooks?.onAttack?.({ game: this, attacker, defender, damage });
@@ -271,7 +272,11 @@ export class Game {
       this.renderStatusRow("EXP", `${this.player.exp}/${this.player.nextLevelExp}`),
       this.renderStatusRow("HP", `${this.player.hp}/${this.player.maxHp}`),
       this.renderStatusRow("攻撃力", `${this.player.getAttack()}`),
-      this.renderStatusRow("武器", this.player.weapon ? `+${this.player.weapon.atk}` : "なし"),
+      this.renderStatusRow("防御力", `${this.player.getDefense()}`),
+      this.renderStatusRow("速度", `${this.player.getSpeed()}`),
+      this.renderStatusRow("武器", this.player.weapon ? this.renderEquipmentSummary(this.player.weapon) : "なし"),
+      this.renderStatusRow("防具", this.player.armor ? this.renderEquipmentSummary(this.player.armor) : "なし"),
+      this.renderStatusRow("アクセ", this.player.accessory ? this.renderEquipmentSummary(this.player.accessory) : "なし"),
       this.renderStatusRow("バッグ", `${this.player.itemBag.length}/${this.player.maxBagItems}`),
       this.renderBagControls(),
       this.isBagOpen ? this.renderBagContents() : "",
@@ -290,6 +295,18 @@ export class Game {
 
   private renderStatusRow(label: string, value: string): string {
     return `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`;
+  }
+
+  private renderEquipmentSummary(equipment: import("../../game/Player").Equipment): string {
+    const stats = equipment.stats;
+    const summary = [
+      stats.atk !== 0 ? `ATK+${stats.atk}` : "",
+      stats.def !== 0 ? `DEF+${stats.def}` : "",
+      stats.spd !== 0 ? `SPD+${stats.spd}` : "",
+      stats.maxHp !== 0 ? `HP+${stats.maxHp}` : "",
+      stats.maxMp !== 0 ? `MP+${stats.maxMp}` : "",
+    ].filter(Boolean).join(" ");
+    return summary ? `${equipment.name} ${summary}` : equipment.name;
   }
 
   /** 設定変更後に、現在のマップのタイル見た目を新しい設定で上書きする。 */

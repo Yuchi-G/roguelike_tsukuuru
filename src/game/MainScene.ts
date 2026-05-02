@@ -56,6 +56,8 @@ export class MainScene {
       player.hp = Math.min(player.maxHp, Math.max(1, carriedPlayer.hp));
       player.attackPower = carriedPlayer.attackPower;
       player.weapon = carriedPlayer.weapon;
+      player.armor = carriedPlayer.armor;
+      player.accessory = carriedPlayer.accessory;
       player.itemBag = [...carriedPlayer.itemBag];
     }
     const enemies: Enemy[] = [];

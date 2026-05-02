@@ -114,10 +114,31 @@ export const sampleGameConfig: GameConfig = {
     { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, maxMp: 0, attackPower: 2, defense: 0, speed: 4, expValue: 3, aiId: "flee", aiScript: fleeAiScript },
   ],
   items: [
-    { id: "potion", name: "回復薬", char: "!", color: "#ff6fae", effects: [{ effectId: "heal", params: { amount: 8 } }] },
-    { id: "sword", name: "剣", char: ")", color: "#f0d978", effects: [{ effectId: "equipWeapon", params: { atk: 3 } }] },
+    { id: "potion", name: "回復薬", char: "!", color: "#ff6fae", kind: "consumable", shopPrice: 30, effects: [{ effectId: "heal", params: { amount: 8 } }] },
+    {
+      id: "sword",
+      name: "剣",
+      char: ")",
+      color: "#f0d978",
+      kind: "equipment",
+      equipmentSlot: "weapon",
+      equipmentStats: { atk: 3, def: 0, spd: 0, maxHp: 0, maxMp: 0 },
+      shopPrice: 120,
+      effects: [{ effectId: "equipWeapon", params: { slot: "weapon", atk: 3, def: 0, spd: 0, maxHp: 0, maxMp: 0 } }],
+    },
+    {
+      id: "armor",
+      name: "革の鎧",
+      char: "[",
+      color: "#c49a6c",
+      kind: "equipment",
+      equipmentSlot: "armor",
+      equipmentStats: { atk: 0, def: 2, spd: 0, maxHp: 0, maxMp: 0 },
+      shopPrice: 100,
+      effects: [{ effectId: "equipWeapon", params: { slot: "armor", atk: 0, def: 2, spd: 0, maxHp: 0, maxMp: 0 } }],
+    },
     // fullHeal効果のサンプル: HP全回復。main.tsで効果を登録している。
-    { id: "elixir", name: "エリクサー", char: "~", color: "#a0e0ff", effects: [{ effectId: "fullHeal", params: {} }] },
+    { id: "elixir", name: "エリクサー", char: "~", color: "#a0e0ff", kind: "consumable", shopPrice: 180, effects: [{ effectId: "fullHeal", params: {} }] },
   ],
   floorRules: {
     maxEnemies: 12,
@@ -136,6 +157,7 @@ export const sampleGameConfig: GameConfig = {
         itemDrops: [
           { itemId: "potion", chance: 0.55 },
           { itemId: "sword", chance: 0.25 },
+          { itemId: "armor", chance: 0.15 },
           { itemId: "elixir", chance: 0.10 },
         ],
         enemyHpBonusPerFloor: 0.8,

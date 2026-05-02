@@ -68,8 +68,12 @@ const STATS: Option[] = [
   ["hp", "HP"],
   ["maxHp", "最大HP"],
   ["hpPercent", "HP%"],
-  // mp / maxMp / mpPercent / def / spd は未実装のため非表示
+  ["mp", "MP"],
+  ["maxMp", "最大MP"],
+  ["mpPercent", "MP%"],
   ["atk", "攻撃力"],
+  ["def", "防御力"],
+  ["spd", "速度"],
   ["level", "レベル"],
   ["exp", "経験値"],
   ["floor", "階層"],

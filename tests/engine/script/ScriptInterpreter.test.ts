@@ -369,6 +369,23 @@ describe("アクション: setStat", () => {
     interp.run(script([actionNode({ type: "setStat", target: "self", stat: "atk", value: literalValueRef(12) })]), { game, self });
     expect(self.attackPower).toBe(12);
   });
+
+  it("MP / DEF / SPDを設定できる", () => {
+    const interp = new ScriptInterpreter();
+    const game = makeGame();
+    const self = makeActor(0, 0, 10, 20, 5);
+    self.maxMp = 10;
+
+    interp.run(script([
+      actionNode({ type: "setStat", target: "self", stat: "mp", value: literalValueRef(7) }),
+      actionNode({ type: "setStat", target: "self", stat: "def", value: literalValueRef(3) }),
+      actionNode({ type: "setStat", target: "self", stat: "spd", value: literalValueRef(4) }),
+    ]), { game, self });
+
+    expect(self.mp).toBe(7);
+    expect(self.defense).toBe(3);
+    expect(self.speed).toBe(4);
+  });
 });
 
 describe("アクション: offerBagItem", () => {
@@ -734,10 +751,19 @@ describe("resolveValue", () => {
     const interp = new ScriptInterpreter();
     const game = makeGame();
     const self = makeActor(0, 0, 8, 20, 3);
+    self.maxMp = 10;
+    self.mp = 5;
+    self.defense = 2;
+    self.speed = 6;
     expect(interp.resolveValue({ type: "stat", target: "self", stat: "hp" }, { game, self })).toBe(8);
     expect(interp.resolveValue({ type: "stat", target: "self", stat: "maxHp" }, { game, self })).toBe(20);
     expect(interp.resolveValue({ type: "stat", target: "self", stat: "atk" }, { game, self })).toBe(3);
     expect(interp.resolveValue({ type: "stat", target: "self", stat: "hpPercent" }, { game, self })).toBe(40);
+    expect(interp.resolveValue({ type: "stat", target: "self", stat: "mp" }, { game, self })).toBe(5);
+    expect(interp.resolveValue({ type: "stat", target: "self", stat: "maxMp" }, { game, self })).toBe(10);
+    expect(interp.resolveValue({ type: "stat", target: "self", stat: "mpPercent" }, { game, self })).toBe(50);
+    expect(interp.resolveValue({ type: "stat", target: "self", stat: "def" }, { game, self })).toBe(2);
+    expect(interp.resolveValue({ type: "stat", target: "self", stat: "spd" }, { game, self })).toBe(6);
   });
 
   it("stat: playerターゲットでプレイヤーの値を参照", () => {

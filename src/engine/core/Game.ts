@@ -165,12 +165,13 @@ export class Game {
     return true;
   }
 
-  /** 攻撃力分のダメージを与え、倒した場合は経験値を加算して敵リストから除く。 */
+  /** 攻撃力から防御力を引いたダメージを与え、倒した場合は経験値を加算して敵リストから除く。 */
   attack(attacker: Actor, defender: Actor): void {
     const attackPower = attacker.id === this.player.id ? this.player.getAttack() : attacker.attackPower;
-    defender.damage(attackPower);
-    this.logger.add(this.config.messages.attack(attacker, defender, attackPower));
-    this.config.hooks?.onAttack?.({ game: this, attacker, defender, damage: attackPower });
+    const damage = Math.max(0, attackPower - defender.defense);
+    defender.damage(damage);
+    this.logger.add(this.config.messages.attack(attacker, defender, damage));
+    this.config.hooks?.onAttack?.({ game: this, attacker, defender, damage });
 
     if (defender.isDead) {
       const defeatedEnemy = this.enemies.find((enemy) => enemy.id === defender.id);

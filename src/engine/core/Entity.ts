@@ -19,7 +19,7 @@ export abstract class Entity {
 }
 
 /**
- * HPと攻撃力を持つ行動主体。
+ * HP、攻撃力、防御力、速度などを持つ行動主体。
  * プレイヤーと敵は戦闘できるため、このクラスを継承する。
  */
 export abstract class Actor extends Entity {
@@ -32,6 +32,10 @@ export abstract class Actor extends Entity {
     public hp: number,
     public maxHp: number,
     public attackPower: number,
+    public maxMp = 0,
+    public mp = maxMp,
+    public defense = 0,
+    public speed = 0,
   ) {
     super(spawnX, spawnY, glyph, color, true);
   }

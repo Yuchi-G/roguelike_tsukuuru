@@ -246,7 +246,10 @@ export class ConfigPanel {
       this.textInput("見た目", "newEnemy.char", "e", 1),
       this.colorInput("色", "newEnemy.color", "#ffffff"),
       this.numberInput("HP", "newEnemy.maxHp", 8, 1),
+      this.numberInput("MP", "newEnemy.maxMp", 0, 0),
       this.numberInput("攻撃", "newEnemy.attackPower", 2, 0),
+      this.numberInput("防御", "newEnemy.defense", 0, 0),
+      this.numberInput("速度", "newEnemy.speed", 0, 0),
       this.numberInput("EXP", "newEnemy.expValue", 4, 0),
       this.selectInput("AI", "newEnemy.aiId", "chase", this.aiOptions),
       this.numberInput("初期出現重み", "newEnemy.weight", 3, 0),
@@ -266,7 +269,10 @@ export class ConfigPanel {
       this.textInput("見た目", `${enemyFieldPrefix}.char`, enemy.char, 1),
       this.colorInput("色", `${enemyFieldPrefix}.color`, enemy.color),
       this.numberInput("HP", `${enemyFieldPrefix}.maxHp`, enemy.maxHp, 1),
+      this.numberInput("MP", `${enemyFieldPrefix}.maxMp`, enemy.maxMp ?? 0, 0),
       this.numberInput("攻撃", `${enemyFieldPrefix}.attackPower`, enemy.attackPower, 0),
+      this.numberInput("防御", `${enemyFieldPrefix}.defense`, enemy.defense ?? 0, 0),
+      this.numberInput("速度", `${enemyFieldPrefix}.speed`, enemy.speed ?? 0, 0),
       this.numberInput("EXP", `${enemyFieldPrefix}.expValue`, enemy.expValue, 0),
       this.selectInput("AI", `${enemyFieldPrefix}.aiId`, enemy.aiId, this.aiOptions),
       `<div class="script-editor-mount" data-script-target="enemy-ai" data-enemy-id="${escapeHtml(enemy.id)}"></div>`,
@@ -614,7 +620,10 @@ export class ConfigPanel {
         enemy.char = this.charValue(formData, `${enemyFieldPrefix}.char`, enemy.char);
         enemy.color = this.stringValue(formData, `${enemyFieldPrefix}.color`, enemy.color);
         enemy.maxHp = this.numberValue(formData, `${enemyFieldPrefix}.maxHp`, enemy.maxHp);
+        enemy.maxMp = this.numberValue(formData, `${enemyFieldPrefix}.maxMp`, enemy.maxMp ?? 0);
         enemy.attackPower = this.numberValue(formData, `${enemyFieldPrefix}.attackPower`, enemy.attackPower);
+        enemy.defense = this.numberValue(formData, `${enemyFieldPrefix}.defense`, enemy.defense ?? 0);
+        enemy.speed = this.numberValue(formData, `${enemyFieldPrefix}.speed`, enemy.speed ?? 0);
         enemy.expValue = this.numberValue(formData, `${enemyFieldPrefix}.expValue`, enemy.expValue);
         enemy.aiId = this.stringValue(formData, `${enemyFieldPrefix}.aiId`, enemy.aiId);
         return enemy;
@@ -628,7 +637,10 @@ export class ConfigPanel {
         char: this.charValue(formData, "newEnemy.char", "e"),
         color: this.stringValue(formData, "newEnemy.color", "#ffffff"),
         maxHp: this.numberValue(formData, "newEnemy.maxHp", 8),
+        maxMp: this.numberValue(formData, "newEnemy.maxMp", 0),
         attackPower: this.numberValue(formData, "newEnemy.attackPower", 2),
+        defense: this.numberValue(formData, "newEnemy.defense", 0),
+        speed: this.numberValue(formData, "newEnemy.speed", 0),
         expValue: this.numberValue(formData, "newEnemy.expValue", 4),
         aiId: this.stringValue(formData, "newEnemy.aiId", "chase"),
       });
@@ -984,6 +996,7 @@ export class ConfigPanel {
       if (loadedSchemaVersion < projectSchemaVersion) {
         this.migrateFloorRuleCoverage();
       }
+      this.normalizeEnemyStats();
       this.applyMessageTemplates();
       return true;
     } catch {
@@ -1074,6 +1087,19 @@ export class ConfigPanel {
     for (const itemDefinition of this.config.items) {
       this.addItemToFloorRules(itemDefinition.id, 0.25);
     }
+  }
+
+  /** 旧プロジェクトJSONに無い敵ステータスを補完する。 */
+  private normalizeEnemyStats(): void {
+    for (const enemyDefinition of this.config.enemies) {
+      enemyDefinition.maxMp = this.normalizedNumber(enemyDefinition.maxMp, 0, 0);
+      enemyDefinition.defense = this.normalizedNumber(enemyDefinition.defense, 0, 0);
+      enemyDefinition.speed = this.normalizedNumber(enemyDefinition.speed, 0, 0);
+    }
+  }
+
+  private normalizedNumber(value: unknown, fallback: number, min: number): number {
+    return typeof value === "number" && Number.isFinite(value) ? Math.max(min, value) : fallback;
   }
 
   /** 敵設定のマウントポイントにスクリプトエディタを生成して挿入する。 */

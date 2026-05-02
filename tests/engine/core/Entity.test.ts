@@ -52,6 +52,16 @@ describe("Actor.damage()", () => {
   });
 });
 
+describe("Actor combat stats", () => {
+  it("MP / DEF / SPD の初期値は0", () => {
+    const actor = makeActor(10, 10);
+    expect(actor.maxMp).toBe(0);
+    expect(actor.mp).toBe(0);
+    expect(actor.defense).toBe(0);
+    expect(actor.speed).toBe(0);
+  });
+});
+
 describe("Actor.heal()", () => {
   it("HPを回復する", () => {
     const actor = makeActor(5, 10);

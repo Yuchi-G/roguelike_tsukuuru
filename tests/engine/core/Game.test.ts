@@ -2,6 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Game } from "../../../src/engine/core/Game";
+import { Actor } from "../../../src/engine/core/Entity";
 import { GameMap } from "../../../src/engine/map/Map";
 import { Player } from "../../../src/game/Player";
 import { Tile } from "../../../src/engine/map/Tile";
@@ -9,6 +10,10 @@ import { sampleGameConfig } from "../../../src/game/sampleGameConfig";
 import type { GameConfig } from "../../../src/engine/core/GameConfig";
 
 // ========================== ヘルパー ==========================
+
+class TestActor extends Actor {
+  update(_game: Game): void {}
+}
 
 /** canvas.getContext("2d") のモック。jsdom は Canvas API を持たないため。 */
 function mockCanvas(): HTMLCanvasElement {
@@ -129,5 +134,20 @@ describe("Game: 設定変更後のステータス再計算", () => {
     // attackPower: 3 + 4 * 0.7 = 5.8 → 6
     expect(game.player.attackPower).toBe(6);
     expect(Number.isInteger(game.player.attackPower)).toBe(true);
+  });
+});
+
+describe("Game.attack()", () => {
+  it("防御力で攻撃ダメージを軽減する", () => {
+    const config = freshConfig();
+    const game = createGame(config);
+    const map = makeMap();
+    const player = new Player(5, 5, config.player);
+    const defender = new TestActor(6, 5, "e", "white", "Enemy", 10, 10, 2, 0, 0, 3, 0);
+
+    game.startDungeonFloor(map, player, [], []);
+    game.attack(player, defender);
+
+    expect(defender.hp).toBe(8);
   });
 });

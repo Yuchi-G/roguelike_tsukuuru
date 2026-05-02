@@ -538,20 +538,17 @@ export class ScriptInterpreter {
       case "hpPercent":
         return actor.maxHp > 0 ? Math.round((actor.hp / actor.maxHp) * 100) : 0;
       case "mp":
-        // フェーズ2で実装
-        return 0;
+        return actor.mp;
       case "maxMp":
-        return 0;
+        return actor.maxMp;
       case "mpPercent":
-        return 0;
+        return actor.maxMp > 0 ? Math.round((actor.mp / actor.maxMp) * 100) : 0;
       case "atk":
         return actor.attackPower;
       case "def":
-        // フェーズ2で実装
-        return 0;
+        return actor.defense;
       case "spd":
-        // フェーズ2で実装
-        return 0;
+        return actor.speed;
       case "level": {
         const player = this.asPlayer(actor, context);
         return player?.level ?? 0;
@@ -577,6 +574,19 @@ export class ScriptInterpreter {
       case "atk":
         actor.attackPower = Math.max(0, Math.round(statValue));
         break;
+      case "mp":
+        actor.mp = Math.max(0, Math.min(actor.maxMp, Math.round(statValue)));
+        break;
+      case "maxMp":
+        actor.maxMp = Math.max(0, Math.round(statValue));
+        actor.mp = Math.min(actor.mp, actor.maxMp);
+        break;
+      case "def":
+        actor.defense = Math.max(0, Math.round(statValue));
+        break;
+      case "spd":
+        actor.speed = Math.max(0, Math.round(statValue));
+        break;
       case "level": {
         const player = this.asPlayer(actor, context);
         if (player) player.level = Math.max(1, Math.round(statValue));
@@ -587,7 +597,7 @@ export class ScriptInterpreter {
         if (player) player.exp = Math.max(0, Math.round(statValue));
         break;
       }
-      // 読み取り専用または未実装のステータスは何もしない
+      // 読み取り専用のステータスは何もしない
       default:
         break;
     }

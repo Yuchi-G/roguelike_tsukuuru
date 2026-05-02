@@ -22,7 +22,23 @@ export class Enemy extends Actor {
   ) {
     const maxHpWithFloorBonus = Math.max(1, Math.round(definition.maxHp + hpBonus));
     const attackPowerWithFloorBonus = Math.max(0, Math.round(definition.attackPower + attackBonus));
-    super(spawnX, spawnY, definition.char, definition.color, definition.name, maxHpWithFloorBonus, maxHpWithFloorBonus, attackPowerWithFloorBonus);
+    const maxMp = Math.max(0, Math.round(definition.maxMp ?? 0));
+    const defense = Math.max(0, Math.round(definition.defense ?? 0));
+    const speed = Math.max(0, Math.round(definition.speed ?? 0));
+    super(
+      spawnX,
+      spawnY,
+      definition.char,
+      definition.color,
+      definition.name,
+      maxHpWithFloorBonus,
+      maxHpWithFloorBonus,
+      attackPowerWithFloorBonus,
+      maxMp,
+      maxMp,
+      defense,
+      speed,
+    );
     this.expValue = definition.expValue;
   }
 

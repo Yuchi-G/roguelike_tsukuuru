@@ -42,7 +42,10 @@ export type EnemyDefinition = {
   color: string;
   name: string;
   maxHp: number;
+  maxMp: number;
   attackPower: number;
+  defense: number;
+  speed: number;
   expValue: number;
   aiId: string;
   /** aiId の代わりにスクリプトで AI を定義する場合に設定する。 */

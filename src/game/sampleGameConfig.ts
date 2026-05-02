@@ -108,10 +108,10 @@ export const sampleGameConfig: GameConfig = {
   },
   tiles: defaultTileDefinitions,
   enemies: [
-    { id: "weak", char: "s", color: "#7cc7d8", name: "スライム", maxHp: 8, attackPower: 2, expValue: 4, aiId: "chase", aiScript: chaseAiScript },
-    { id: "normal", char: "g", color: "#9bd37d", name: "ゴブリン", maxHp: 10, attackPower: 3, expValue: 5, aiId: "chase", aiScript: chaseAiScript },
-    { id: "strong", char: "O", color: "#d88964", name: "オーク", maxHp: 16, attackPower: 5, expValue: 9, aiId: "chase", aiScript: chaseAiScript },
-    { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, attackPower: 2, expValue: 3, aiId: "flee", aiScript: fleeAiScript },
+    { id: "weak", char: "s", color: "#7cc7d8", name: "スライム", maxHp: 8, maxMp: 0, attackPower: 2, defense: 0, speed: 1, expValue: 4, aiId: "chase", aiScript: chaseAiScript },
+    { id: "normal", char: "g", color: "#9bd37d", name: "ゴブリン", maxHp: 10, maxMp: 0, attackPower: 3, defense: 1, speed: 2, expValue: 5, aiId: "chase", aiScript: chaseAiScript },
+    { id: "strong", char: "O", color: "#d88964", name: "オーク", maxHp: 16, maxMp: 0, attackPower: 5, defense: 2, speed: 1, expValue: 9, aiId: "chase", aiScript: chaseAiScript },
+    { id: "bat", char: "b", color: "#c8a0d8", name: "コウモリ", maxHp: 6, maxMp: 0, attackPower: 2, defense: 0, speed: 4, expValue: 3, aiId: "flee", aiScript: fleeAiScript },
   ],
   items: [
     { id: "potion", name: "回復薬", char: "!", color: "#ff6fae", effects: [{ effectId: "heal", params: { amount: 8 } }] },

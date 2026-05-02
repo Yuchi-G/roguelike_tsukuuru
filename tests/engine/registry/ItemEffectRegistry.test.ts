@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ItemEffectRegistry, numberEffectParam } from "../../../src/engine/registry/ItemEffectRegistry";
+import { createDefaultItemEffectRegistry, ItemEffectRegistry, numberEffectParam } from "../../../src/engine/registry/ItemEffectRegistry";
 import type { Game } from "../../../src/engine/core/Game";
 import type { Player } from "../../../src/game/Player";
 import type { ItemEffectContext } from "../../../src/engine/registry/ItemEffectRegistry";
@@ -29,6 +29,33 @@ describe("ItemEffectRegistry", () => {
   it("未登録のIDでrunするとエラーを投げる", () => {
     const registry = new ItemEffectRegistry();
     expect(() => registry.run("unknown", makeContext())).toThrow("Unknown item effect: unknown");
+  });
+});
+
+describe("createDefaultItemEffectRegistry()", () => {
+  it("equipWeapon はスロット指定に従って防具を装備する", () => {
+    const registry = createDefaultItemEffectRegistry();
+    const player = {
+      equip: vi.fn(() => null),
+    } as unknown as Player;
+    const game = {
+      logger: { add: vi.fn() },
+      config: { messages: { weaponEquipped: vi.fn(() => "装備した") } },
+    } as unknown as Game;
+
+    registry.run("equipWeapon", makeContext({
+      game,
+      player,
+      itemName: "革の鎧",
+      params: { slot: "armor", atk: 0, def: 2, spd: 0, maxHp: 0, maxMp: 0 },
+      source: "pickup",
+    }));
+
+    expect(player.equip).toHaveBeenCalledWith({
+      name: "革の鎧",
+      slot: "armor",
+      stats: { atk: 0, def: 2, spd: 0, maxHp: 0, maxMp: 0 },
+    });
   });
 });
 

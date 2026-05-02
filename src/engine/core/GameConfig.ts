@@ -35,6 +35,18 @@ export type DungeonConfig = {
 /** アイテム効果に渡すパラメータ（amount, atk など）。 */
 export type EffectParams = Record<string, number | string | boolean>;
 
+export type ItemKind = "consumable" | "equipment" | "key";
+
+export type EquipmentSlot = "weapon" | "armor" | "accessory";
+
+export type EquipmentStats = {
+  atk: number;
+  def: number;
+  spd: number;
+  maxHp: number;
+  maxMp: number;
+};
+
 /** 敵の種類を定義する。ConfigPanel で編集可能。 */
 export type EnemyDefinition = {
   id: string;
@@ -58,6 +70,10 @@ export type ItemDefinition = {
   name: string;
   char: string;
   color: string;
+  kind: ItemKind;
+  equipmentSlot?: EquipmentSlot;
+  equipmentStats?: EquipmentStats;
+  shopPrice: number;
   effects: Array<{
     effectId: string;
     params: EffectParams;

@@ -1,10 +1,11 @@
 import { Actor } from "../engine/core/Entity";
-import type { EffectParams, PlayerInitialStats } from "../engine/core/GameConfig";
+import type { EffectParams, PlayerInitialStats, EquipmentSlot, EquipmentStats } from "../engine/core/GameConfig";
 import type { ScriptDefinition } from "../engine/script/Script";
 
 export type Equipment = {
   name: string;
-  atk: number;
+  slot: EquipmentSlot;
+  stats: EquipmentStats;
 };
 
 export type BagItem = {
@@ -23,6 +24,8 @@ export class Player extends Actor {
   public exp: number;
   public nextLevelExp: number;
   public weapon: Equipment | null = null;
+  public armor: Equipment | null = null;
+  public accessory: Equipment | null = null;
   public itemBag: BagItem[] = [];
 
   constructor(spawnX: number, spawnY: number, initialStats: PlayerInitialStats) {
@@ -39,7 +42,42 @@ export class Player extends Actor {
 
   /** 基礎攻撃力に武器の攻撃力を足した、実際の攻撃力を返す。 */
   getAttack(): number {
-    return this.attackPower + (this.weapon?.atk ?? 0);
+    return this.attackPower + this.totalEquipmentStat("atk");
+  }
+
+  getDefense(): number {
+    return this.defense + this.totalEquipmentStat("def");
+  }
+
+  getSpeed(): number {
+    return this.speed + this.totalEquipmentStat("spd");
+  }
+
+  getEquipment(slot: EquipmentSlot): Equipment | null {
+    return this[slot];
+  }
+
+  equip(equipment: Equipment): Equipment | null {
+    const previousEquipment = this.getEquipment(equipment.slot);
+    const previousStats = previousEquipment?.stats ?? { atk: 0, def: 0, spd: 0, maxHp: 0, maxMp: 0 };
+    this[equipment.slot] = equipment;
+    this.applyMaxStatEquipmentDelta(equipment.stats.maxHp - previousStats.maxHp, equipment.stats.maxMp - previousStats.maxMp);
+    return previousEquipment;
+  }
+
+  private totalEquipmentStat(statKey: keyof EquipmentStats): number {
+    return [this.weapon, this.armor, this.accessory].reduce((total, equipment) => total + (equipment?.stats[statKey] ?? 0), 0);
+  }
+
+  private applyMaxStatEquipmentDelta(maxHpDelta: number, maxMpDelta: number): void {
+    if (maxHpDelta !== 0) {
+      this.maxHp = Math.max(1, this.maxHp + maxHpDelta);
+      this.hp = Math.min(this.maxHp, Math.max(0, this.hp + maxHpDelta));
+    }
+    if (maxMpDelta !== 0) {
+      this.maxMp = Math.max(0, this.maxMp + maxMpDelta);
+      this.mp = Math.min(this.maxMp, Math.max(0, this.mp + maxMpDelta));
+    }
   }
 
   /** バッグに回復アイテムを追加する。 */

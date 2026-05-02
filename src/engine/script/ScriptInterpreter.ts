@@ -359,7 +359,9 @@ export class ScriptInterpreter {
             name: itemDefinition.name,
             effectId: primaryEffectDefinition?.effectId ?? "",
             params: primaryEffectDefinition?.params ?? {},
-            description: primaryEffectDefinition?.effectId === "equipWeapon" ? `ATK +${primaryEffectAmount}` : `HP +${primaryEffectAmount}`,
+            description: primaryEffectDefinition?.effectId === "equipWeapon"
+              ? this.equipmentDescription(primaryEffectDefinition.params)
+              : `HP +${primaryEffectAmount}`,
             useScript: itemDefinition.effectScript,
           });
         }
@@ -371,18 +373,17 @@ export class ScriptInterpreter {
         const player = targetActor ? this.asPlayer(targetActor, context) : null;
         if (player) {
           const itemName = String(this.resolveValue(action.itemName, context));
-          const weaponAttackBonus = this.toNumber(this.resolveValue(action.atk, context));
-          if (player.weapon !== null) {
-            const equippedWeapon = player.weapon;
+          const equipmentStats = { atk: this.toNumber(this.resolveValue(action.atk, context)), def: 0, spd: 0, maxHp: 0, maxMp: 0 };
+          const replacedEquipment = player.equip({ name: itemName, slot: "weapon", stats: equipmentStats });
+          if (replacedEquipment !== null) {
             player.addItem({
-              name: equippedWeapon.name,
+              name: replacedEquipment.name,
               effectId: "equipWeapon",
-              params: { atk: equippedWeapon.atk },
-              description: `ATK +${equippedWeapon.atk}`,
+              params: { slot: replacedEquipment.slot, ...replacedEquipment.stats },
+              description: this.equipmentDescription(replacedEquipment.stats),
             });
           }
-          player.weapon = { name: itemName, atk: weaponAttackBonus };
-          context.game.logger.add(context.game.config.messages.weaponEquipped(itemName, weaponAttackBonus));
+          context.game.logger.add(context.game.config.messages.weaponEquipped(itemName, equipmentStats.atk));
         }
         return;
       }
@@ -644,6 +645,21 @@ export class ScriptInterpreter {
 
   private effectParamValue(effectId: string, params: Record<string, number | string | boolean>): number {
     const paramName = effectId === "equipWeapon" ? "atk" : "amount";
+    const paramValue = params[paramName];
+    return typeof paramValue === "number" ? paramValue : 0;
+  }
+
+  private equipmentDescription(params: Record<string, number | string | boolean>): string {
+    return [
+      this.numericParam(params, "atk") !== 0 ? `ATK +${this.numericParam(params, "atk")}` : "",
+      this.numericParam(params, "def") !== 0 ? `DEF +${this.numericParam(params, "def")}` : "",
+      this.numericParam(params, "spd") !== 0 ? `SPD +${this.numericParam(params, "spd")}` : "",
+      this.numericParam(params, "maxHp") !== 0 ? `HP +${this.numericParam(params, "maxHp")}` : "",
+      this.numericParam(params, "maxMp") !== 0 ? `MP +${this.numericParam(params, "maxMp")}` : "",
+    ].filter(Boolean).join(" ") || "装備";
+  }
+
+  private numericParam(params: Record<string, number | string | boolean>, paramName: string): number {
     const paramValue = params[paramName];
     return typeof paramValue === "number" ? paramValue : 0;
   }

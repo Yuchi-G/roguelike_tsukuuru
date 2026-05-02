@@ -43,8 +43,29 @@ describe("Player.getAttack()", () => {
 
   it("武器装備時は基礎攻撃力 + 武器攻撃力", () => {
     const player = makePlayer({ attackPower: 5 });
-    player.weapon = { name: "剣", atk: 3 };
+    player.weapon = { name: "剣", slot: "weapon", stats: { atk: 3, def: 0, spd: 0, maxHp: 0, maxMp: 0 } };
     expect(player.getAttack()).toBe(8);
+  });
+});
+
+describe("Player equipment slots", () => {
+  it("防具とアクセサリの補正を参照できる", () => {
+    const player = makePlayer();
+    player.armor = { name: "革の鎧", slot: "armor", stats: { atk: 0, def: 2, spd: 0, maxHp: 0, maxMp: 0 } };
+    player.accessory = { name: "俊足の指輪", slot: "accessory", stats: { atk: 0, def: 1, spd: 3, maxHp: 0, maxMp: 0 } };
+    expect(player.getDefense()).toBe(3);
+    expect(player.getSpeed()).toBe(3);
+  });
+
+  it("装備時に最大HP/MP補正を反映する", () => {
+    const player = makePlayer();
+    player.maxMp = 5;
+    player.mp = 2;
+    player.equip({ name: "生命の指輪", slot: "accessory", stats: { atk: 0, def: 0, spd: 0, maxHp: 4, maxMp: 3 } });
+    expect(player.maxHp).toBe(24);
+    expect(player.hp).toBe(24);
+    expect(player.maxMp).toBe(8);
+    expect(player.mp).toBe(5);
   });
 });
 
